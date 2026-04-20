@@ -396,23 +396,24 @@ export default function RotationsPage() {
       )}
 
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tours de Dahira</h1>
           <p className="text-sm text-gray-500 mt-1">{total} tours au total</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowManualModal(true)} variant="ghost" className="border border-gray-300">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setShowManualModal(true)} variant="ghost" className="flex-1 sm:flex-none border border-gray-300">
             <Plus className="h-4 w-4" />
             Manuel
           </Button>
-          <Button onClick={() => { setPeriodResult(null); setShowPeriodModal(true) }} variant="ghost" className="border border-purple-300 text-purple-700 hover:bg-purple-50">
+          <Button onClick={() => { setPeriodResult(null); setShowPeriodModal(true) }} variant="ghost" className="flex-1 sm:flex-none border border-purple-300 text-purple-700 hover:bg-purple-50">
             <CalendarRange className="h-4 w-4" />
             Période
           </Button>
-          <Button onClick={() => setShowAutoModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={() => setShowAutoModal(true)} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
             <Wand2 className="h-4 w-4" />
-            Auto-planifier
+            <span className="hidden sm:inline">Auto-planifier</span>
+            <span className="sm:hidden">Auto</span>
           </Button>
         </div>
       </div>

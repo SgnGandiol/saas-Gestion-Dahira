@@ -79,7 +79,8 @@ export default function MembersPage() {
         </div>
         <Button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="h-4 w-4" />
-          Ajouter un membre
+          <span className="hidden sm:inline">Ajouter un membre</span>
+          <span className="sm:hidden">Ajouter</span>
         </Button>
       </div>
 
@@ -114,7 +115,43 @@ export default function MembersPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile : cartes */}
+            <div className="md:hidden divide-y divide-gray-50">
+              {filtered.map((m: any) => (
+                <div key={m.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 shrink-0">
+                      <span className="text-emerald-700 text-sm font-semibold">
+                        {m.full_name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">{m.full_name}</p>
+                      <p className="text-xs text-gray-500">{m.phone ?? '—'}</p>
+                      {m.house && (
+                        <p className="text-xs text-gray-400 truncate">🏠 {m.house.label ?? m.house.address}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {m.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenModal(m)} className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteMember(m.id)} disabled={deleteLoading} className="h-8 w-8 p-0 text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop : tableau */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
@@ -166,6 +203,7 @@ export default function MembersPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

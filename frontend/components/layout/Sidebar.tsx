@@ -12,6 +12,7 @@ import {
   LogOut,
   LayoutDashboard,
   Building2,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
@@ -22,14 +23,18 @@ import { LOGOUT_MUTATION } from '@/graphql/mutations/auth'
 const navItems = [
   { href: '/dashboard',             label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/dashboard/members',     label: 'Membres',         icon: Users },
-  { href: '/dashboard/maisons',      label: 'Maisons',         icon: Home },
+  { href: '/dashboard/maisons',     label: 'Maisons',         icon: Home },
   { href: '/dashboard/rotations',   label: 'Tours',           icon: RotateCcw },
   { href: '/dashboard/finance',     label: 'Finance',         icon: DollarSign },
   { href: '/dashboard/assignments', label: 'Tâches',          icon: ClipboardList },
   { href: '/dashboard/settings',    label: 'Paramètres',      icon: Settings },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, clearAuth, isSuperAdmin } = useAuthStore()
   const [logoutMutation] = useMutation(LOGOUT_MUTATION)
@@ -38,7 +43,7 @@ export function Sidebar() {
     try {
       await logoutMutation()
     } catch {
-      // Session déjà expirée côté serveur, on continue
+      // Session déjà expirée côté serveur
     }
     clearAuth()
     await apolloClient.clearStore()
@@ -46,18 +51,27 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
+    <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 shrink-0">
           <span className="text-white font-bold text-sm">SGD</span>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900 truncate max-w-[140px]">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">
             {user?.dahira?.name ?? 'Mon Dahira'}
           </p>
           <p className="text-xs text-gray-500">{user?.dahira?.city ?? ''}</p>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="ml-1 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -65,6 +79,7 @@ export function Sidebar() {
         {isSuperAdmin() && (
           <Link
             href="/dashboard/dahiras"
+            onClick={onClose}
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               pathname.startsWith('/dashboard/dahiras')
@@ -82,6 +97,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 active
@@ -99,7 +115,7 @@ export function Sidebar() {
       {/* User footer */}
       <div className="border-t border-gray-100 px-3 py-4">
         <div className="flex items-center gap-3 px-3 py-2 mb-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 shrink-0">
             <span className="text-emerald-700 text-xs font-semibold">
               {user?.name?.charAt(0).toUpperCase()}
             </span>

@@ -114,8 +114,8 @@ export default function MaisonsPage() {
     <div className="space-y-6">
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+          <div className="w-full sm:max-w-lg sm:rounded-lg rounded-t-2xl bg-white shadow-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 {selectedHouse ? 'Modifier la maison' : 'Nouvelle maison'}
@@ -214,7 +214,42 @@ export default function MaisonsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile : cartes */}
+            <div className="md:hidden divide-y divide-gray-50">
+              {filtered.map((h) => (
+                <div key={h.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 text-sm">{h.label || h.address}</p>
+                    {h.label && <p className="text-xs text-gray-500 truncate">{h.address}</p>}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        h.is_available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {h.is_available ? 'Disponible' : 'Indisponible'}
+                      </span>
+                      <span className="text-xs text-gray-400">{h.total_received} passage{(h.total_received ?? 0) > 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 shrink-0 ml-3">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(h)} className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={deleteLoading}
+                      onClick={() => confirm(`Supprimer "${h.label ?? h.address}" ?`) && deleteHouse({ variables: { id: h.id } })}
+                      className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop : tableau */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
@@ -262,6 +297,7 @@ export default function MaisonsPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

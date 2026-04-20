@@ -219,17 +219,17 @@ export default function FinancePage() {
       )}
 
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
           <p className="text-sm text-gray-500 mt-1">Cotisations, dépenses et solde de caisse</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setShowExpenseModal(true)} variant="ghost" className="border border-red-200 text-red-600 hover:bg-red-50">
+          <Button onClick={() => setShowExpenseModal(true)} variant="ghost" className="flex-1 sm:flex-none border border-red-200 text-red-600 hover:bg-red-50">
             <TrendingDown className="h-4 w-4" />
             Dépense
           </Button>
-          <Button onClick={() => setShowContribModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={() => setShowContribModal(true)} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
             <Plus className="h-4 w-4" />
             Cotisation
           </Button>
@@ -307,7 +307,24 @@ export default function FinancePage() {
             contributions.length === 0 ? (
               <EmptyState icon={<DollarSign />} message="Aucune cotisation enregistrée" />
             ) : (
-              <table className="w-full text-sm">
+              <>
+              {/* Mobile : cartes */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {contributions.map((c: any) => (
+                  <div key={c.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">{c.member?.full_name}</p>
+                      <p className="text-xs text-gray-500 capitalize">{c.type} · {formatDate(c.paid_at)}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+                      <span className="font-semibold text-emerald-600 text-sm">{formatAmount(c.amount)}</span>
+                      <StatusBadge status={c.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop : tableau */}
+              <table className="hidden md:table w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Membre</th>
@@ -331,12 +348,27 @@ export default function FinancePage() {
                   ))}
                 </tbody>
               </table>
+              </>
             )
           ) : (
             expenses.length === 0 ? (
               <EmptyState icon={<TrendingDown />} message="Aucune dépense enregistrée" />
             ) : (
-              <table className="w-full text-sm">
+              <>
+              {/* Mobile : cartes */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {expenses.map((e: any) => (
+                  <div key={e.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">{e.label}</p>
+                      <p className="text-xs text-gray-500 capitalize">{e.category} · {formatDate(e.spent_at)}</p>
+                    </div>
+                    <span className="font-semibold text-red-600 text-sm shrink-0 ml-3">{formatAmount(e.amount)}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop : tableau */}
+              <table className="hidden md:table w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Libellé</th>
@@ -356,6 +388,7 @@ export default function FinancePage() {
                   ))}
                 </tbody>
               </table>
+              </>
             )
           )}
         </CardContent>

@@ -21,9 +21,8 @@ class MemberFactory extends Factory
             'last_name'      => fake()->lastName(),
             'phone'          => '+221 7' . fake()->numerify('# ### ## ##'),
             'gender'         => fake()->randomElement(['male', 'female']),
-            'is_active'      => true,
-            'is_family_head' => false,
-            'joined_at'      => fake()->dateTimeBetween('-5 years', 'now'),
+            'is_active'  => true,
+            'joined_at'  => fake()->dateTimeBetween('-5 years', 'now'),
         ];
     }
 
@@ -37,8 +36,4 @@ class MemberFactory extends Factory
         return $this->state(['is_active' => false]);
     }
 
-    public function familyHead(): static
-    {
-        return $this->state(['is_family_head' => true]);
-    }
 }

@@ -14,7 +14,7 @@ class Rotation extends Model
         static::addGlobalScope(new TenantScope());
     }
     protected $fillable = [
-        'dahira_id', 'house_id', 'scheduled_date',
+        'dahira_id', 'house_id', 'member_id', 'scheduled_date',
         'status', 'attendees_count', 'notes',
     ];
 
@@ -30,6 +30,11 @@ class Rotation extends Model
     public function house(): BelongsTo
     {
         return $this->belongsTo(House::class);
+    }
+
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(Member::class);
     }
 
     public function assignments(): HasMany

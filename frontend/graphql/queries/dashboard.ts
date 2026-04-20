@@ -25,7 +25,7 @@ export const GET_DASHBOARD_STATS = gql`
   query GetDashboardStats($dahira_id: ID!) {
     dashboardStats(dahira_id: $dahira_id) {
       active_members_count
-      families_count
+      houses_count
       monthly_contributions
       monthly_expenses
       balance
@@ -37,10 +37,6 @@ export const GET_DASHBOARD_STATS = gql`
           id
           label
           address
-          family {
-            id
-            name
-          }
         }
       }
     }

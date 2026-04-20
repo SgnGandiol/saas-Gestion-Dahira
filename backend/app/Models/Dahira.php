@@ -24,11 +24,6 @@ class Dahira extends Model
         return $this->hasMany(Member::class);
     }
 
-    public function families(): HasMany
-    {
-        return $this->hasMany(Family::class);
-    }
-
     public function houses(): HasMany
     {
         return $this->hasMany(House::class);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\House;
+use App\Models\Member;
 use App\Models\Rotation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -10,48 +11,119 @@ use Illuminate\Support\Facades\DB;
 class RotationService
 {
     /**
-     * Suggests the best house for the next rotation based on 6 criteria:
-     * 1. Days since last visit (higher = better priority)
-     * 2. Total rotations received (lower = better equity)
-     * 3. Hosting capacity
-     * 4. Availability flag
-     * 5. Minimum interval respect (min_interval_weeks)
-     * 6. Family head seniority
+     * Selects the house with the highest debt using Deficit Round Robin.
      *
-     * Returns null when no eligible house exists.
+     * Debt formula:
+     *   debt(H) = actual_rotations(H) − (total_rotations × active_members(H) / total_active_members)
+     *
+     * A negative debt means the house is under-served relative to its size.
+     * We pick the house with the lowest (most negative) debt.
+     *
+     * Global totals are computed over ALL available houses (not just the eligible pool)
+     * so that a house exiting cooldown sees its correct historical debt.
+     *
+     * Hard exclusions:
+     *   - No active members
+     *   - is_available = false
+     *   - Cooldown not respected (strict mode only)
+     *
+     * @param array $extraCounts  rotations already planned in this session (house_id => count)
      */
-    public function suggestNextHouse(int $dahiraId, string $scheduledDate): ?House
-    {
+    public function suggestNextHouse(
+        int    $dahiraId,
+        string $scheduledDate,
+        bool   $strictInterval = true,
+        array  $extraCounts    = []
+    ): ?House {
         $date = Carbon::parse($scheduledDate);
 
         $houses = House::where('dahira_id', $dahiraId)
             ->where('is_available', true)
             ->with([
-                'family',
-                'family.members' => fn ($q) => $q->where('is_family_head', true),
-                'rotations'      => fn ($q) => $q->orderByDesc('scheduled_date')->limit(1),
+                'rotations' => fn ($q) => $q->orderByDesc('scheduled_date')->limit(1),
+                'members'   => fn ($q) => $q->where('is_active', true),
+            ])
+            ->withCount([
+                'rotations as scheduled_count' => fn ($q) => $q->whereIn('status', ['planned', 'confirmed', 'done']),
             ])
             ->get();
 
-        $eligible = $houses->filter(fn (House $h) => $this->respectsMinInterval($h, $date));
-
-        if ($eligible->isEmpty()) {
+        if ($houses->isEmpty()) {
             return null;
         }
 
-        return $eligible
-            ->sortByDesc(fn (House $h) => $this->score($h, $date))
+        $houses = $houses->filter(fn (House $h) => $h->members->isNotEmpty());
+
+        if ($houses->isEmpty()) {
+            return null;
+        }
+
+        // Compute global totals over ALL houses (preserve historical debt baseline)
+        $totalMembers   = $houses->sum(fn (House $h) => $h->members->count());
+        $totalRotations = $houses->sum(
+            fn (House $h) => ($h->scheduled_count ?? 0) + ($extraCounts[$h->id] ?? 0)
+        );
+
+        // Apply cooldown filter
+        $eligible = $houses->filter(fn (House $h) => $this->respectsMinInterval($h, $date));
+
+        $pool = $eligible->isNotEmpty()
+            ? $eligible
+            : ($strictInterval ? collect() : $houses);
+
+        if ($pool->isEmpty()) {
+            return null;
+        }
+
+        return $pool
+            ->sortBy(fn (House $h) => $this->houseDebt($h, $totalRotations, $totalMembers, $extraCounts[$h->id] ?? 0))
             ->first();
+    }
+
+    /**
+     * Picks the member with the fewest rotations globally.
+     * Members who never hosted get absolute priority.
+     * Tiebreaker: days since last rotation (more days = higher priority).
+     * Single aggregated query — no N+1.
+     */
+    public function suggestNextMember(House $house): ?Member
+    {
+        $members = $house->relationLoaded('members')
+            ? $house->members->where('is_active', true)
+            : $house->members()->where('is_active', true)->get();
+
+        if ($members->isEmpty()) {
+            return null;
+        }
+
+        $stats = Rotation::whereIn('member_id', $members->pluck('id'))
+            ->whereIn('status', ['planned', 'confirmed', 'done'])
+            ->selectRaw('member_id, COUNT(*) as cnt, MAX(scheduled_date) as last_date')
+            ->groupBy('member_id')
+            ->get()
+            ->keyBy('member_id');
+
+        return $members->sortBy(function (Member $m) use ($stats) {
+            $row   = $stats->get($m->id);
+            $count = (int) ($row?->cnt ?? 0);
+            $days  = $row?->last_date
+                ? Carbon::parse($row->last_date)->diffInDays(now())
+                : PHP_INT_MAX;
+
+            // Primary: fewest rotations. Tiebreaker: longest idle (negative sign = prefer more days)
+            return $count - ($days * 0.0001);
+        })->first();
     }
 
     /**
      * Creates a rotation record.
      */
-    public function createRotation(int $dahiraId, int $houseId, string $scheduledDate): Rotation
+    public function createRotation(int $dahiraId, int $houseId, string $scheduledDate, ?int $memberId = null): Rotation
     {
         return Rotation::create([
             'dahira_id'      => $dahiraId,
             'house_id'       => $houseId,
+            'member_id'      => $memberId,
             'scheduled_date' => $scheduledDate,
             'status'         => 'planned',
         ]);
@@ -59,7 +131,7 @@ class RotationService
 
     /**
      * Updates rotation status.
-     * When marked as done, atomically refreshes the family stats.
+     * When marked as done, increments house stats.
      */
     public function updateStatus(Rotation $rotation, string $status): Rotation
     {
@@ -67,10 +139,10 @@ class RotationService
             $rotation->update(['status' => $status]);
 
             if ($status === 'done') {
-                $house = $rotation->house()->with('family')->first();
-                if ($house?->family) {
-                    $house->family->increment('total_received');
-                    $house->family->update(['last_received_at' => $rotation->scheduled_date]);
+                $house = $rotation->house()->first();
+                if ($house) {
+                    $house->increment('total_received');
+                    $house->update(['last_received_at' => $rotation->scheduled_date]);
                 }
             }
 
@@ -82,6 +154,10 @@ class RotationService
     //  Private helpers
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Checks that enough weeks have passed since the last rotation.
+     * Defaults to 4 weeks when min_interval_weeks is null.
+     */
     private function respectsMinInterval(House $house, Carbon $date): bool
     {
         $lastRotation = $house->rotations->first();
@@ -89,42 +165,30 @@ class RotationService
             return true;
         }
 
+        $minWeeks       = $house->min_interval_weeks ?? 4;
         $weeksSinceLast = Carbon::parse($lastRotation->scheduled_date)->diffInWeeks($date);
 
-        return $weeksSinceLast >= $house->min_interval_weeks;
+        return $weeksSinceLast >= $minWeeks;
     }
 
-    private function score(House $house, Carbon $date): float
+    /**
+     * DRR debt for a house: actual_rotations − fair_share.
+     *
+     * A house with a lower (more negative) debt is under-served and should be
+     * selected next. Tiebreaker: small bonus for houses idle the longest.
+     */
+    private function houseDebt(House $house, int $totalRotations, int $totalMembers, int $extraCount = 0): float
     {
-        $score  = 0.0;
-        $family = $house->family;
+        $active    = $house->members->count();
+        $actual    = ($house->scheduled_count ?? 0) + $extraCount;
+        $fairShare = $totalMembers > 0 ? ($totalRotations * $active) / $totalMembers : 0.0;
+        $debt      = $actual - $fairShare;
 
-        // Criterion 1 — days since last rotation (1000 bonus if never visited)
-        $lastRotation = $house->rotations->first();
-        if ($lastRotation) {
-            $days   = Carbon::parse($lastRotation->scheduled_date)->diffInDays($date);
-            $score += $days * 0.5;
-        } else {
-            $score += 1000;
-        }
+        $last          = $house->rotations->first();
+        $daysSinceLast = $last
+            ? Carbon::parse($last->scheduled_date)->diffInDays(now())
+            : PHP_INT_MAX;
 
-        // Criterion 2 — equity: fewer total received = higher score
-        // Always use family->total_received as canonical source; 0 if no family
-        $total  = $family?->total_received ?? 0;
-        $score += max(0, 200 - $total * 10);
-
-        // Criterion 3 — hosting capacity (slight bonus)
-        $score += $house->capacity * 0.2;
-
-        // Criterion 6 — family head seniority (older = higher score)
-        if ($family) {
-            $head = $family->members->first();
-            if ($head?->joined_at) {
-                $months = Carbon::parse($head->joined_at)->diffInMonths(now());
-                $score += $months * 0.3;
-            }
-        }
-
-        return $score;
+        return $debt - ($daysSinceLast * 0.0001);
     }
 }

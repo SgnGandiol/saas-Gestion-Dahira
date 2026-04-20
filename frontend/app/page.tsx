@@ -19,8 +19,8 @@ const FEATURES = [
   },
   {
     icon: Home,
-    title: 'Familles & Maisons',
-    desc: 'Gérez les foyers, capacités d\'accueil et historique des passages reçus.',
+    title: 'Maisons',
+    desc: 'Gérez les maisons d\'accueil, capacités et historique des passages reçus.',
   },
   {
     icon: Shield,
@@ -65,7 +65,7 @@ export default function LandingPage() {
       <section className="max-w-4xl mx-auto px-6 pt-20 pb-24 text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-medium text-emerald-700 mb-6">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Plateforme SaaS · Multi-tenant · Laravel 12 + Next.js 16
+          Nous avons lancé ! Rejoignez les premiers Dahira qui ont modernisé leur gestion. Inscription gratuite.
         </div>
 
         <h1 className="text-5xl font-extrabold text-gray-900 leading-tight mb-6">
@@ -140,7 +140,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-8 px-6 text-center text-sm text-gray-400">
-        SGD v1.0 · SaaS Gestion Dahira · Laravel 12 · Next.js 16 · GraphQL
+        SGD v1.0 · SaaS Gestion Dahira · copyright GandiolDesign · 
       </footer>
     </div>
   )

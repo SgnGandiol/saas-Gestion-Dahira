@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+
 class House extends Model
 {
     protected static function booted(): void
@@ -14,15 +15,17 @@ class House extends Model
         static::addGlobalScope(new TenantScope());
     }
     protected $fillable = [
-        'dahira_id', 'family_id', 'label', 'address',
+        'dahira_id', 'label', 'address',
         'neighborhood', 'latitude', 'longitude',
         'capacity', 'is_available', 'min_interval_weeks',
+        'total_received', 'last_received_at',
     ];
 
     protected $casts = [
-        'is_available' => 'boolean',
-        'latitude'     => 'decimal:7',
-        'longitude'    => 'decimal:7',
+        'is_available'    => 'boolean',
+        'latitude'        => 'decimal:7',
+        'longitude'       => 'decimal:7',
+        'last_received_at' => 'date',
     ];
 
     public function dahira(): BelongsTo
@@ -30,9 +33,9 @@ class House extends Model
         return $this->belongsTo(Dahira::class);
     }
 
-    public function family(): BelongsTo
+    public function members(): HasMany
     {
-        return $this->belongsTo(Family::class);
+        return $this->hasMany(Member::class);
     }
 
     public function rotations(): HasMany

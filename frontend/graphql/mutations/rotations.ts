@@ -10,7 +10,6 @@ export const SCHEDULE_ROTATION = gql`
         id
         label
         address
-        family { id name }
       }
     }
   }
@@ -22,12 +21,17 @@ export const AUTO_SCHEDULE_ROTATION = gql`
       id
       scheduled_date
       status
+      member {
+        id
+        full_name
+      }
       house {
         id
         label
         address
         capacity
-        family { id name total_received last_received_at }
+        total_received
+        last_received_at
       }
     }
   }
@@ -39,6 +43,53 @@ export const UPDATE_ROTATION_STATUS = gql`
       id
       status
       attendees_count
+    }
+  }
+`
+
+export const RESCHEDULE_ROTATION = gql`
+  mutation RescheduleRotation($id: ID!, $scheduled_date: Date!) {
+    rescheduleRotation(id: $id, scheduled_date: $scheduled_date) {
+      id
+      scheduled_date
+      status
+    }
+  }
+`
+
+export const SCHEDULE_PERIOD_ROTATIONS = gql`
+  mutation SchedulePeriodRotations($dahira_id: ID!, $start_date: Date!, $end_date: Date!) {
+    schedulePeriodRotations(dahira_id: $dahira_id, start_date: $start_date, end_date: $end_date) {
+      created_count
+      skipped_count
+      skipped_dates
+      rotations {
+        id
+        scheduled_date
+        status
+        house {
+          id
+          label
+          address
+        }
+      }
+    }
+  }
+`
+
+export const TOGGLE_ASSIGNMENT = gql`
+  mutation ToggleAssignment($id: ID!) {
+    toggleAssignment(id: $id) {
+      id
+      completed
+    }
+  }
+`
+
+export const DELETE_ASSIGNMENT = gql`
+  mutation DeleteAssignment($id: ID!) {
+    deleteAssignment(id: $id) {
+      id
     }
   }
 `

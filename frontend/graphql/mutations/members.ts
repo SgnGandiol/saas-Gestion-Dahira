@@ -3,24 +3,24 @@ import { gql } from '@apollo/client/core'
 export const CREATE_MEMBER = gql`
   mutation CreateMember(
     $dahira_id: ID!
+    $house_id: ID
     $first_name: String!
     $last_name: String!
     $phone: String
     $email: String
     $gender: Gender!
     $profession: String
-    $family_id: ID
   ) {
     createMember(
       input: {
         dahira_id: $dahira_id
+        house_id: $house_id
         first_name: $first_name
         last_name: $last_name
         phone: $phone
         email: $email
         gender: $gender
         profession: $profession
-        family_id: $family_id
       }
     ) {
       id
@@ -32,11 +32,11 @@ export const CREATE_MEMBER = gql`
       gender
       profession
       is_active
-      is_family_head
       joined_at
-      family {
+      house {
         id
-        name
+        label
+        address
       }
     }
   }
@@ -45,25 +45,25 @@ export const CREATE_MEMBER = gql`
 export const UPDATE_MEMBER = gql`
   mutation UpdateMember(
     $id: ID!
+    $house_id: ID
     $first_name: String
     $last_name: String
     $phone: String
     $email: String
     $gender: Gender
     $profession: String
-    $family_id: ID
     $is_active: Boolean
   ) {
     updateMember(
       id: $id
       input: {
+        house_id: $house_id
         first_name: $first_name
         last_name: $last_name
         phone: $phone
         email: $email
         gender: $gender
         profession: $profession
-        family_id: $family_id
         is_active: $is_active
       }
     ) {
@@ -76,11 +76,11 @@ export const UPDATE_MEMBER = gql`
       gender
       profession
       is_active
-      is_family_head
       joined_at
-      family {
+      house {
         id
-        name
+        label
+        address
       }
     }
   }

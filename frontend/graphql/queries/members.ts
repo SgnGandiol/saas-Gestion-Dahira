@@ -13,11 +13,11 @@ export const GET_MEMBERS = gql`
         gender
         profession
         is_active
-        is_family_head
         joined_at
-        family {
+        house {
           id
-          name
+          label
+          address
         }
       }
       paginatorInfo {
@@ -42,17 +42,16 @@ export const GET_MEMBER = gql`
       gender
       profession
       is_active
-      is_family_head
       joined_at
       notes
-      family {
-        id
-        name
-        address
-      }
       dahira {
         id
         name
+      }
+      house {
+        id
+        label
+        address
       }
     }
   }

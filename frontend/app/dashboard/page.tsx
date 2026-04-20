@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/utils'
 
 interface DashboardStats {
   active_members_count: number
-  families_count: number
+  houses_count: number
   monthly_contributions: number
   monthly_expenses: number
   balance: number
@@ -17,7 +17,7 @@ interface DashboardStats {
     id: string
     scheduled_date: string
     status: string
-    house: { id: string; label?: string; address: string; family?: { id: string; name: string } }
+    house: { id: string; label?: string; address: string }
   } | null
 }
 
@@ -47,8 +47,8 @@ export default function DashboardPage() {
       bg:    'bg-emerald-50',
     },
     {
-      label: 'Familles',
-      value: statsLoading ? '...' : String(stats?.families_count ?? '—'),
+      label: 'Maisons',
+      value: statsLoading ? '...' : String(stats?.houses_count ?? '—'),
       icon:  Home,
       color: 'text-blue-600',
       bg:    'bg-blue-50',
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                     {stats.next_rotation.house?.label || stats.next_rotation.house?.address}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Famille {stats.next_rotation.house?.family?.name}
+                    {stats.next_rotation.house?.address}
                   </p>
                 </div>
                 <div className="text-right">

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation, ApolloError } from '@apollo/client/react'
+import { useMutation, useQuery, ApolloError } from '@apollo/client/react'
 import { X } from 'lucide-react'
 import { MemberForm, MemberFormData } from './MemberForm'
 import { CREATE_MEMBER, UPDATE_MEMBER } from '@/graphql/mutations/members'
-import { Member } from '@/types'
+import { GET_HOUSES } from '@/graphql/queries/families'
+import { Member, House } from '@/types'
 
 interface MemberModalProps {
   isOpen: boolean
@@ -18,13 +19,19 @@ interface MemberModalProps {
 export function MemberModal({ isOpen, onClose, onSuccess, dahiraId, member }: MemberModalProps) {
   const [error, setError] = useState('')
 
+  const { data: housesData } = useQuery(GET_HOUSES, {
+    variables: { dahira_id: dahiraId, first: 100, page: 1 },
+    skip: !dahiraId,
+  })
+  const houses: House[] = housesData?.houses?.data ?? []
+
   const [createMember, { loading: createLoading }] = useMutation(CREATE_MEMBER, {
     onCompleted: () => {
       onSuccess()
       onClose()
     },
     onError: (err: ApolloError) => {
-      setError((err as ApolloError).graphQLErrors?.[0]?.message ?? 'Erreur lors de la création')
+      setError(err.graphQLErrors?.[0]?.message ?? 'Erreur lors de la création')
     },
   })
 
@@ -34,7 +41,7 @@ export function MemberModal({ isOpen, onClose, onSuccess, dahiraId, member }: Me
       onClose()
     },
     onError: (err: ApolloError) => {
-      setError((err as ApolloError).graphQLErrors?.[0]?.message ?? 'Erreur lors de la mise à jour')
+      setError(err.graphQLErrors?.[0]?.message ?? 'Erreur lors de la mise à jour')
     },
   })
 
@@ -46,25 +53,31 @@ export function MemberModal({ isOpen, onClose, onSuccess, dahiraId, member }: Me
       return
     }
 
+    const houseId = data.house_id || null
+
     if (member) {
-      // Édition
       updateMember({
         variables: {
           id: member.id,
-          ...data,
+          house_id: houseId,
+          first_name: data.first_name,
+          last_name: data.last_name,
           phone: data.phone || null,
           email: data.email || null,
+          gender: data.gender,
           profession: data.profession || null,
         },
       })
     } else {
-      // Création
       createMember({
         variables: {
           dahira_id: dahiraId,
-          ...data,
+          house_id: houseId,
+          first_name: data.first_name,
+          last_name: data.last_name,
           phone: data.phone || null,
           email: data.email || null,
+          gender: data.gender,
           profession: data.profession || null,
         },
       })
@@ -94,6 +107,7 @@ export function MemberModal({ isOpen, onClose, onSuccess, dahiraId, member }: Me
         <div className="p-6">
           <MemberForm
             member={member}
+            houses={houses}
             onSubmit={handleSubmit}
             isLoading={createLoading || updateLoading}
             error={error}

@@ -126,7 +126,7 @@ export default function FinancePage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Membre <span className="text-red-500">*</span></label>
                 <select value={cMemberId} onChange={(e) => setCMemberId(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-emerald-500 focus:outline-none">
+                  className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none">
                   <option value="">Sélectionnez...</option>
                   {members.map((m: any) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                 </select>
@@ -135,14 +135,14 @@ export default function FinancePage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <select value={cType} onChange={(e) => setCType(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-emerald-500 focus:outline-none">
+                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none">
                     {CONTRIBUTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
                   <select value={cStatus} onChange={(e) => setCStatus(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-emerald-500 focus:outline-none">
+                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none">
                     {CONTRIBUTION_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
@@ -190,7 +190,7 @@ export default function FinancePage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
                   <select value={eCategory} onChange={(e) => setECategory(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-emerald-500 focus:outline-none">
+                    className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none">
                     {EXPENSE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>

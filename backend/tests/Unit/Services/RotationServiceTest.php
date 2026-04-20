@@ -3,7 +3,6 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Dahira;
-use App\Models\Family;
 use App\Models\House;
 use App\Models\Member;
 use App\Models\Rotation;
@@ -108,11 +107,8 @@ class RotationServiceTest extends TestCase
 
     public function test_suggest_prefers_house_with_fewer_total_received(): void
     {
-        $family1 = Family::factory()->for($this->dahira)->withReceivedCount(1)->create();
-        $family2 = Family::factory()->for($this->dahira)->withReceivedCount(5)->create();
-
-        $houseFewerVisits = House::factory()->for($this->dahira)->create(['family_id' => $family1->id]);
-        $houseMoreVisits  = House::factory()->for($this->dahira)->create(['family_id' => $family2->id]);
+        $houseFewerVisits = House::factory()->for($this->dahira)->create(['total_received' => 1]);
+        $houseMoreVisits  = House::factory()->for($this->dahira)->create(['total_received' => 5]);
 
         $result = $this->service->suggestNextHouse($this->dahira->id, now()->format('Y-m-d'));
 
@@ -163,10 +159,9 @@ class RotationServiceTest extends TestCase
         $this->assertDatabaseHas('rotations', ['id' => $rotation->id, 'status' => 'confirmed']);
     }
 
-    public function test_update_status_to_done_increments_family_total_received(): void
+    public function test_update_status_to_done_increments_house_total_received(): void
     {
-        $family = Family::factory()->for($this->dahira)->withReceivedCount(2)->create();
-        $house  = House::factory()->for($this->dahira)->create(['family_id' => $family->id]);
+        $house = House::factory()->for($this->dahira)->create(['total_received' => 2]);
 
         $rotation = Rotation::factory()->create([
             'dahira_id'      => $this->dahira->id,
@@ -177,17 +172,16 @@ class RotationServiceTest extends TestCase
 
         $this->service->updateStatus($rotation, 'done');
 
-        $this->assertDatabaseHas('families', [
-            'id'             => $family->id,
+        $this->assertDatabaseHas('houses', [
+            'id'             => $house->id,
             'total_received' => 3,
         ]);
     }
 
     public function test_update_status_to_done_updates_last_received_at(): void
     {
-        $family = Family::factory()->for($this->dahira)->create();
-        $house  = House::factory()->for($this->dahira)->create(['family_id' => $family->id]);
-        $date   = '2026-05-11';
+        $house = House::factory()->for($this->dahira)->create();
+        $date  = '2026-05-11';
 
         $rotation = Rotation::factory()->create([
             'dahira_id'      => $this->dahira->id,
@@ -198,34 +192,31 @@ class RotationServiceTest extends TestCase
 
         $this->service->updateStatus($rotation, 'done');
 
-        $this->assertDatabaseHas('families', [
-            'id'              => $family->id,
-            'last_received_at'=> $date,
+        $this->assertDatabaseHas('houses', [
+            'id'               => $house->id,
+            'last_received_at' => $date,
         ]);
     }
 
-    public function test_update_status_to_confirmed_does_not_change_family_stats(): void
+    public function test_update_status_to_confirmed_does_not_change_house_stats(): void
     {
-        $family = Family::factory()->for($this->dahira)->withReceivedCount(0)->create();
-        $house  = House::factory()->for($this->dahira)->create(['family_id' => $family->id]);
+        $house = House::factory()->for($this->dahira)->create(['total_received' => 0]);
 
         $rotation = Rotation::factory()->create([
-            'dahira_id' => $this->dahira->id,
-            'house_id'  => $house->id,
+            'dahira_id'      => $this->dahira->id,
+            'house_id'       => $house->id,
             'scheduled_date' => now()->toDateString(),
-            'status'    => 'planned',
+            'status'         => 'planned',
         ]);
 
         $this->service->updateStatus($rotation, 'confirmed');
 
-        $this->assertDatabaseHas('families', ['id' => $family->id, 'total_received' => 0]);
+        $this->assertDatabaseHas('houses', ['id' => $house->id, 'total_received' => 0]);
     }
 
     public function test_update_status_is_atomic_via_transaction(): void
     {
-        // Verify the method wraps in a transaction by checking it returns fresh data
-        $family   = Family::factory()->for($this->dahira)->create();
-        $house    = House::factory()->for($this->dahira)->create(['family_id' => $family->id]);
+        $house = House::factory()->for($this->dahira)->create();
         $rotation = Rotation::factory()->create([
             'dahira_id'      => $this->dahira->id,
             'house_id'       => $house->id,
@@ -235,8 +226,7 @@ class RotationServiceTest extends TestCase
 
         $result = $this->service->updateStatus($rotation, 'done');
 
-        // Both the rotation status and family stats should be updated atomically
         $this->assertEquals('done', $result->status);
-        $this->assertEquals(1, $family->fresh()->total_received);
+        $this->assertEquals(1, $house->fresh()->total_received);
     }
 }

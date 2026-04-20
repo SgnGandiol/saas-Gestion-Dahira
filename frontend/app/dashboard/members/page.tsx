@@ -93,7 +93,7 @@ export default function MembersPage() {
                 placeholder="Rechercher un membre..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="h-10 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function MembersPage() {
                   <tr className="border-b border-gray-100">
                     <th className="pb-3 text-left font-medium text-gray-500">Nom complet</th>
                     <th className="pb-3 text-left font-medium text-gray-500">Téléphone</th>
-                    <th className="pb-3 text-left font-medium text-gray-500">Famille</th>
+                    <th className="pb-3 text-left font-medium text-gray-500">Maison</th>
                     <th className="pb-3 text-left font-medium text-gray-500">Statut</th>
                     <th className="pb-3 text-left font-medium text-gray-500">Actions</th>
                   </tr>
@@ -128,16 +128,11 @@ export default function MembersPage() {
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((m: any) => (
                     <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 font-medium text-gray-900">
-                        {m.full_name}
-                        {m.is_family_head && (
-                          <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                            Chef
-                          </span>
-                        )}
-                      </td>
+                      <td className="py-3 font-medium text-gray-900">{m.full_name}</td>
                       <td className="py-3 text-gray-600">{m.phone ?? '—'}</td>
-                      <td className="py-3 text-gray-600">{m.family?.name ?? '—'}</td>
+                      <td className="py-3 text-gray-600">
+                        {m.house ? (m.house.label ?? m.house.address) : '—'}
+                      </td>
                       <td className="py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                           m.is_active

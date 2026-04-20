@@ -94,7 +94,7 @@ export function DahiraForm({ dahira, onSubmit, isLoading = false, error }: Dahir
           disabled={isLoading}
           rows={3}
           placeholder="Description de la Dahira..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50"
         />
         {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
       </div>

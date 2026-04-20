@@ -22,7 +22,7 @@ import { LOGOUT_MUTATION } from '@/graphql/mutations/auth'
 const navItems = [
   { href: '/dashboard',             label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/dashboard/members',     label: 'Membres',         icon: Users },
-  { href: '/dashboard/families',    label: 'Familles',        icon: Home },
+  { href: '/dashboard/maisons',      label: 'Maisons',         icon: Home },
   { href: '/dashboard/rotations',   label: 'Tours',           icon: RotateCcw },
   { href: '/dashboard/finance',     label: 'Finance',         icon: DollarSign },
   { href: '/dashboard/assignments', label: 'Tâches',          icon: ClipboardList },

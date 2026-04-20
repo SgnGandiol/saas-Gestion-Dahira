@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Member } from '@/types'
+import { Member, House } from '@/types'
 
 const memberSchema = z.object({
   first_name: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
@@ -14,18 +14,20 @@ const memberSchema = z.object({
   email: z.string().email('Email invalide').optional().or(z.literal('')),
   gender: z.enum(['male', 'female'], { message: 'Sélectionnez un sexe' }),
   profession: z.string().optional().or(z.literal('')),
+  house_id: z.string().optional().or(z.literal('')),
 })
 
 export type MemberFormData = z.infer<typeof memberSchema>
 
 interface MemberFormProps {
   member?: Member
+  houses?: House[]
   onSubmit: (data: MemberFormData) => void
   isLoading?: boolean
   error?: string
 }
 
-export function MemberForm({ member, onSubmit, isLoading = false, error }: MemberFormProps) {
+export function MemberForm({ member, houses = [], onSubmit, isLoading = false, error }: MemberFormProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<MemberFormData>({
     resolver: zodResolver(memberSchema),
     defaultValues: member
@@ -36,6 +38,7 @@ export function MemberForm({ member, onSubmit, isLoading = false, error }: Membe
           email: member.email || '',
           gender: member.gender,
           profession: member.profession || '',
+          house_id: member.house?.id || '',
         }
       : {},
   })
@@ -122,7 +125,7 @@ export function MemberForm({ member, onSubmit, isLoading = false, error }: Membe
         <select
           {...register('gender')}
           disabled={isLoading}
-          className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
         >
           <option value="">Sélectionnez...</option>
           <option value="male">Homme</option>
@@ -131,6 +134,25 @@ export function MemberForm({ member, onSubmit, isLoading = false, error }: Membe
         {errors.gender && (
           <p className="mt-1 text-xs text-red-600">{errors.gender.message}</p>
         )}
+      </div>
+
+      {/* Maison */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Maison d&apos;accueil
+        </label>
+        <select
+          {...register('house_id')}
+          disabled={isLoading}
+          className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        >
+          <option value="">— Aucune maison —</option>
+          {houses.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.label ? `${h.label} — ${h.address}` : h.address}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Profession */}

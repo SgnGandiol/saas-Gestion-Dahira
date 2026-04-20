@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Dahira;
-use App\Models\Family;
 use App\Models\House;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +17,6 @@ class HouseFactory extends Factory
     {
         return [
             'dahira_id'          => Dahira::factory(),
-            'family_id'          => Family::factory(),
             'label'              => null,
             'address'            => fake()->streetAddress(),
             'neighborhood'       => fake()->word(),

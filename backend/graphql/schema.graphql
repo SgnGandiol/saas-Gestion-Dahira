@@ -20,10 +20,6 @@ type Query {
 
     member(id: ID! @eq): Member @find @guard(with: ["sanctum"])
 
-    # Familles
-    families(dahira_id: ID! @eq): [Family!]!
-        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
-
     # Maisons
     houses(dahira_id: ID! @eq): [House!]!
         @paginate(defaultCount: 20) @guard(with: ["sanctum"])
@@ -89,16 +85,14 @@ type Mutation {
 
     deleteMember(id: ID!): Member @delete @guard(with: ["sanctum"])
 
-    # ── Familles ─────────────────────────────────────────────
-    createFamily(input: CreateFamilyInput! @spread): Family!
-        @create @guard(with: ["sanctum"])
-
-    updateFamily(id: ID!, input: UpdateFamilyInput! @spread): Family!
-        @update @guard(with: ["sanctum"])
-
     # ── Maisons ──────────────────────────────────────────────
     createHouse(input: CreateHouseInput! @spread): House!
         @create @guard(with: ["sanctum"])
+
+    updateHouse(id: ID!, input: UpdateHouseInput! @spread): House!
+        @update @guard(with: ["sanctum"])
+
+    deleteHouse(id: ID!): House @delete @guard(with: ["sanctum"])
 
     # ── Rotations ────────────────────────────────────────────
     scheduleRotation(dahira_id: ID!, scheduled_date: Date!, house_id: ID!): Rotation!
@@ -109,13 +103,27 @@ type Mutation {
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@autoSchedule")
 
+    schedulePeriodRotations(dahira_id: ID!, start_date: Date!, end_date: Date!): SchedulePeriodPayload!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@schedulePeriod")
+
     updateRotationStatus(id: ID!, status: RotationStatus!): Rotation!
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@updateStatus")
 
+    rescheduleRotation(id: ID!, scheduled_date: Date!): Rotation!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@reschedule")
+
     # ── Assignations ─────────────────────────────────────────
     createAssignment(input: CreateAssignmentInput! @spread): Assignment!
         @create @guard(with: ["sanctum"])
+
+    toggleAssignment(id: ID!): Assignment!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\AssignmentMutation@toggle")
+
+    deleteAssignment(id: ID!): Assignment @delete @guard(with: ["sanctum"])
 
     # ── Finance ──────────────────────────────────────────────
     recordContribution(input: CreateContributionInput! @spread): Contribution!
@@ -128,6 +136,13 @@ type Mutation {
 # ─────────────────────────────────────────────────────────────
 #  TYPES
 # ─────────────────────────────────────────────────────────────
+
+type SchedulePeriodPayload {
+    rotations: [Rotation!]!
+    created_count: Int!
+    skipped_dates: [String!]!
+    skipped_count: Int!
+}
 
 type AuthPayload {
     token: String!
@@ -142,7 +157,7 @@ type CreateDahiraPayload {
 
 type DashboardStats {
     active_members_count: Int!
-    families_count: Int!
+    houses_count: Int!
     next_rotation: Rotation
     monthly_contributions: Float!
     monthly_expenses: Float!
@@ -173,7 +188,6 @@ type Dahira {
     description: String
     is_active: Boolean!
     members: [Member!]! @hasMany
-    families: [Family!]! @hasMany
     houses: [House!]! @hasMany
     rotations: [Rotation!]! @hasMany
     created_at: DateTime!
@@ -183,7 +197,7 @@ type Dahira {
 type Member {
     id: ID!
     dahira: Dahira! @belongsTo
-    family: Family @belongsTo
+    house: House @belongsTo
     user: User @belongsTo
     first_name: String!
     last_name: String!
@@ -194,7 +208,6 @@ type Member {
     profession: String
     joined_at: Date
     is_active: Boolean!
-    is_family_head: Boolean!
     notes: String
     contributions: [Contribution!]! @hasMany
     assignments: [Assignment!]! @hasMany
@@ -202,33 +215,18 @@ type Member {
     updated_at: DateTime!
 }
 
-type Family {
-    id: ID!
-    dahira: Dahira! @belongsTo
-    name: String!
-    address: String
-    neighborhood: String
-    phone: String
-    capacity: Int!
-    is_available: Boolean!
-    total_received: Int!
-    last_received_at: Date
-    members: [Member!]! @hasMany
-    house: House @hasOne
-    created_at: DateTime!
-    updated_at: DateTime!
-}
-
 type House {
     id: ID!
     dahira: Dahira! @belongsTo
-    family: Family! @belongsTo
     label: String
     address: String!
     neighborhood: String
     capacity: Int!
     is_available: Boolean!
     min_interval_weeks: Int!
+    total_received: Int!
+    last_received_at: Date
+    members: [Member!]! @hasMany
     rotations: [Rotation!]! @hasMany
     created_at: DateTime!
     updated_at: DateTime!
@@ -238,6 +236,7 @@ type Rotation {
     id: ID!
     dahira: Dahira! @belongsTo
     house: House! @belongsTo
+    member: Member @belongsTo
     scheduled_date: Date!
     status: RotationStatus!
     attendees_count: Int
@@ -359,7 +358,7 @@ input UpdateDahiraInput {
 
 input CreateMemberInput {
     dahira_id: ID!
-    family_id: ID
+    house_id: ID
     first_name: String! @rules(apply: ["min:2", "max:100"])
     last_name: String! @rules(apply: ["min:2", "max:100"])
     phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
@@ -367,12 +366,11 @@ input CreateMemberInput {
     gender: Gender
     profession: String @rules(apply: ["nullable", "max:100"])
     joined_at: Date
-    is_family_head: Boolean
     notes: String @rules(apply: ["nullable", "max:1000"])
 }
 
 input UpdateMemberInput {
-    family_id: ID
+    house_id: ID
     first_name: String @rules(apply: ["min:2", "max:100"])
     last_name: String @rules(apply: ["min:2", "max:100"])
     phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
@@ -380,37 +378,25 @@ input UpdateMemberInput {
     gender: Gender
     profession: String @rules(apply: ["nullable", "max:100"])
     is_active: Boolean
-    is_family_head: Boolean
     notes: String @rules(apply: ["nullable", "max:1000"])
-}
-
-input CreateFamilyInput {
-    dahira_id: ID!
-    name: String! @rules(apply: ["min:2", "max:150"])
-    address: String @rules(apply: ["nullable", "max:255"])
-    neighborhood: String @rules(apply: ["nullable", "max:100"])
-    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
-    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
-    is_available: Boolean
-}
-
-input UpdateFamilyInput {
-    name: String @rules(apply: ["min:2", "max:150"])
-    address: String @rules(apply: ["nullable", "max:255"])
-    neighborhood: String @rules(apply: ["nullable", "max:100"])
-    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
-    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
-    is_available: Boolean
 }
 
 input CreateHouseInput {
     dahira_id: ID!
-    family_id: ID!
     label: String @rules(apply: ["nullable", "max:150"])
     address: String! @rules(apply: ["min:5", "max:255"])
     neighborhood: String @rules(apply: ["nullable", "max:100"])
     capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
     min_interval_weeks: Int @rules(apply: ["nullable", "integer", "min:1", "max:52"])
+}
+
+input UpdateHouseInput {
+    label: String @rules(apply: ["nullable", "max:150"])
+    address: String @rules(apply: ["nullable", "min:5", "max:255"])
+    neighborhood: String @rules(apply: ["nullable", "max:100"])
+    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
+    min_interval_weeks: Int @rules(apply: ["nullable", "integer", "min:1", "max:52"])
+    is_available: Boolean
 }
 
 input CreateAssignmentInput {

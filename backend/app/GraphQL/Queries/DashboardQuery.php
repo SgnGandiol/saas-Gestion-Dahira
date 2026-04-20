@@ -4,7 +4,7 @@ namespace App\GraphQL\Queries;
 
 use App\Models\Contribution;
 use App\Models\Expense;
-use App\Models\Family;
+use App\Models\House;
 use App\Models\Member;
 use App\Models\Rotation;
 use Carbon\Carbon;
@@ -20,13 +20,13 @@ final class DashboardQuery
             ->where('is_active', true)
             ->count();
 
-        $familiesCount = Family::where('dahira_id', $dahiraId)->count();
+        $housesCount = House::where('dahira_id', $dahiraId)->count();
 
         $nextRotation = Rotation::where('dahira_id', $dahiraId)
             ->whereIn('status', ['planned', 'confirmed'])
             ->where('scheduled_date', '>=', $now->toDateString())
             ->orderBy('scheduled_date')
-            ->with(['house.family'])
+            ->with(['house'])
             ->first();
 
         $monthlyContributions = Contribution::where('dahira_id', $dahiraId)
@@ -41,7 +41,7 @@ final class DashboardQuery
 
         return [
             'active_members_count'   => $activeMembersCount,
-            'families_count'         => $familiesCount,
+            'houses_count'           => $housesCount,
             'next_rotation'          => $nextRotation,
             'monthly_contributions'  => (float) $monthlyContributions,
             'monthly_expenses'       => (float) $monthlyExpenses,

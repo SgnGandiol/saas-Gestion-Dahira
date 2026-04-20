@@ -18,16 +18,15 @@ class Member extends Model
     }
 
     protected $fillable = [
-        'dahira_id', 'family_id', 'user_id',
+        'dahira_id', 'house_id', 'user_id',
         'first_name', 'last_name', 'phone', 'email',
         'gender', 'profession', 'joined_at',
-        'is_active', 'is_family_head', 'notes',
+        'is_active', 'notes',
     ];
 
     protected $casts = [
-        'is_active'      => 'boolean',
-        'is_family_head' => 'boolean',
-        'joined_at'      => 'date',
+        'is_active' => 'boolean',
+        'joined_at' => 'date',
     ];
 
     public function dahira(): BelongsTo
@@ -35,9 +34,9 @@ class Member extends Model
         return $this->belongsTo(Dahira::class);
     }
 
-    public function family(): BelongsTo
+    public function house(): BelongsTo
     {
-        return $this->belongsTo(Family::class);
+        return $this->belongsTo(House::class);
     }
 
     public function user(): BelongsTo

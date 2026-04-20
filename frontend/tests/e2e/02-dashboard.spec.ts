@@ -4,7 +4,7 @@ test.describe('Dashboard', () => {
 
   test('affiche les 4 cartes KPI', async ({ loggedInPage: page }) => {
     await expect(page.getByText('Membres actifs')).toBeVisible()
-    await expect(page.getByText('Familles')).toBeVisible()
+    await expect(page.getByText('Maisons')).toBeVisible()
     await expect(page.getByText('Prochain tour')).toBeVisible()
     await expect(page.getByText('Caisse du mois')).toBeVisible()
   })
@@ -12,7 +12,7 @@ test.describe('Dashboard', () => {
   test('affiche la sidebar avec tous les liens de navigation', async ({ loggedInPage: page }) => {
     await expect(page.getByRole('link', { name: /Tableau de bord/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Membres/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /Familles/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Maisons/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Tours/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Finance/i })).toBeVisible()
   })

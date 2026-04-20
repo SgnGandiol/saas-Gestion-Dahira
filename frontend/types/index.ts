@@ -22,22 +22,7 @@ export interface Member {
   profession?: string
   joined_at?: string
   is_active: boolean
-  is_family_head: boolean
-  family?: Family
   dahira: Dahira
-}
-
-export interface Family {
-  id: string
-  name: string
-  address?: string
-  neighborhood?: string
-  phone?: string
-  capacity: number
-  is_available: boolean
-  total_received: number
-  last_received_at?: string
-  members: Member[]
   house?: House
 }
 
@@ -49,7 +34,8 @@ export interface House {
   capacity: number
   is_available: boolean
   min_interval_weeks: number
-  family: Family
+  total_received: number
+  last_received_at?: string
 }
 
 export interface Rotation {

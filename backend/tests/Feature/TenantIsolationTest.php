@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Contribution;
 use App\Models\Dahira;
 use App\Models\Expense;
-use App\Models\Family;
 use App\Models\House;
 use App\Models\Member;
 use App\Models\Rotation;
@@ -93,26 +92,10 @@ class TenantIsolationTest extends TestCase
 
     // ─── Cross-model isolation ───────────────────────────────────
 
-    public function test_family_isolation_by_dahira(): void
-    {
-        Family::factory()->create(['dahira_id' => $this->dahiraA->id, 'name' => 'Family A1']);
-        Family::factory()->create(['dahira_id' => $this->dahiraB->id, 'name' => 'Family B1']);
-
-        $this->actingAs($this->adminA);
-
-        $families = Family::all();
-
-        $this->assertCount(1, $families);
-        $this->assertEquals('Family A1', $families->first()->name);
-    }
-
     public function test_house_isolation_by_dahira(): void
     {
-        $familyA = Family::factory()->create(['dahira_id' => $this->dahiraA->id]);
-        $familyB = Family::factory()->create(['dahira_id' => $this->dahiraB->id]);
-
-        House::factory()->create(['dahira_id' => $this->dahiraA->id, 'family_id' => $familyA->id]);
-        House::factory()->create(['dahira_id' => $this->dahiraB->id, 'family_id' => $familyB->id]);
+        House::factory()->create(['dahira_id' => $this->dahiraA->id]);
+        House::factory()->create(['dahira_id' => $this->dahiraB->id]);
 
         $this->actingAs($this->adminA);
 

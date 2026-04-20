@@ -1,0 +1,134 @@
+services:
+
+  # ── Laravel PHP-FPM ─────────────────────────────────────────
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: sgd_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html           # hot reload du code
+      - vendor_data:/var/www/html/vendor  # vendor isolé dans Docker (perf Windows)
+      - ./backend/docker/php/php-dev.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./backend/docker/php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+    environment:
+      - APP_ENV=local
+      - XDEBUG_MODE=debug
+    networks:
+      - sgd_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Nginx (reverse proxy vers PHP-FPM) ──────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: sgd_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"         # accès : http://localhost:8080
+    volumes:
+      - ./backend:/var/www/html
+      - vendor_data:/var/www/html/vendor  # même volume que app
+      - ./backend/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - sgd_network
+    depends_on:
+      - app
+
+  # ── Next.js Frontend ────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: sgd_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"         # accès : http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - node_modules_data:/app/node_modules  # perf Windows
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8080/graphql
+      - GRAPHQL_INTERNAL_URL=http://nginx/graphql
+    networks:
+      - sgd_network
+    depends_on:
+      - nginx
+
+  # ── Playwright E2E tests ─────────────────────────────────────
+  playwright:
+    build:
+      context: ./frontend
+      dockerfile: docker/playwright.Dockerfile
+    container_name: sgd_playwright
+    profiles: ["test"]          # ne démarre QUE avec: docker compose --profile test run playwright
+    environment:
+      - BASE_URL=http://frontend:3000
+      - CI=true
+    volumes:
+      - ./frontend/tests:/app/tests
+      - ./frontend/playwright.config.ts:/app/playwright.config.ts
+    networks:
+      - sgd_network
+    depends_on:
+      - frontend
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  db:
+    env_file:
+      - .env
+    image: postgres:16-alpine
+    container_name: sgd_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_DATABASE:-sgd}
+      POSTGRES_USER:     ${DB_USERNAME:-sgd_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sgd_secret}
+    ports:
+      - "5432:5432"       # accès local (TablePlus, DBeaver…)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sgd_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sgd_user} -d ${DB_DATABASE:-sgd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (cache, queues, sessions) ─────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sgd_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - sgd_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# ── Volumes persistants ──────────────────────────────────────
+volumes:
+  pgdata:
+    driver: local
+  vendor_data:
+    driver: local
+  node_modules_data:
+    driver: local
+
+# ── Réseau interne ───────────────────────────────────────────
+networks:
+  sgd_network:
+    driver: bridge

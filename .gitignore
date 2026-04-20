@@ -1,0 +1,24 @@
+# Environnement
+.env
+.env.local
+.env.production
+
+# Docker volumes
+pgdata/
+
+# Node
+node_modules/
+.next/
+
+# PHP / Composer
+backend/vendor/
+backend/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

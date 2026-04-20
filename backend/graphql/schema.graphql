@@ -1,0 +1,442 @@
+"Datetime scalar"
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+"Date scalar (Y-m-d)"
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+# ─────────────────────────────────────────────────────────────
+#  QUERIES
+# ─────────────────────────────────────────────────────────────
+type Query {
+    # Auth
+    me: User @auth @guard(with: ["sanctum"])
+
+    # Dahira
+    dahira(id: ID! @eq): Dahira @find @guard(with: ["sanctum"])
+    dahiras: [Dahira!]! @all @guard(with: ["sanctum"])
+
+    # Membres
+    members(dahira_id: ID! @eq, is_active: Boolean @eq): [Member!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    member(id: ID! @eq): Member @find @guard(with: ["sanctum"])
+
+    # Familles
+    families(dahira_id: ID! @eq): [Family!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    # Maisons
+    houses(dahira_id: ID! @eq): [House!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    # Rotations
+    rotations(dahira_id: ID! @eq, status: RotationStatus @eq): [Rotation!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    # Finance
+    contributions(dahira_id: ID! @eq, member_id: ID @eq): [Contribution!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    expenses(dahira_id: ID! @eq): [Expense!]!
+        @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    # Dashboard
+    dashboardStats(dahira_id: ID!): DashboardStats!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\DashboardQuery@stats")
+
+    # Suggestion rotation automatique
+    suggestNextHouse(dahira_id: ID!, scheduled_date: Date!): House
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\RotationSuggestionQuery@suggest")
+}
+
+# ─────────────────────────────────────────────────────────────
+#  MUTATIONS
+# ─────────────────────────────────────────────────────────────
+type Mutation {
+    # ── Auth ────────────────────────────────────────────────
+    login(email: String! @rules(apply: ["email"]), password: String!): AuthPayload!
+        @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@login")
+
+    register(
+        name: String!
+        email: String! @rules(apply: ["email", "unique:users,email"])
+        password: String! @rules(apply: ["min:8"])
+        dahira_name: String!
+        city: String
+    ): AuthPayload!
+        @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
+
+    logout: Boolean! @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@logout")
+
+    # ── Dahiras ──────────────────────────────────────────────
+    createDahira(input: CreateDahiraInput! @spread): CreateDahiraPayload!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\DahiraMutation@create")
+
+    updateDahira(id: ID!, input: UpdateDahiraInput! @spread): Dahira!
+        @update @guard(with: ["sanctum"])
+
+    deleteDahira(id: ID!): Dahira @delete @guard(with: ["sanctum"])
+
+    # ── Membres ──────────────────────────────────────────────
+    createMember(input: CreateMemberInput! @spread): Member!
+        @create @guard(with: ["sanctum"])
+
+    updateMember(id: ID!, input: UpdateMemberInput! @spread): Member!
+        @update @guard(with: ["sanctum"])
+
+    deleteMember(id: ID!): Member @delete @guard(with: ["sanctum"])
+
+    # ── Familles ─────────────────────────────────────────────
+    createFamily(input: CreateFamilyInput! @spread): Family!
+        @create @guard(with: ["sanctum"])
+
+    updateFamily(id: ID!, input: UpdateFamilyInput! @spread): Family!
+        @update @guard(with: ["sanctum"])
+
+    # ── Maisons ──────────────────────────────────────────────
+    createHouse(input: CreateHouseInput! @spread): House!
+        @create @guard(with: ["sanctum"])
+
+    # ── Rotations ────────────────────────────────────────────
+    scheduleRotation(dahira_id: ID!, scheduled_date: Date!, house_id: ID!): Rotation!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@schedule")
+
+    autoScheduleRotation(dahira_id: ID!, scheduled_date: Date!): Rotation!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@autoSchedule")
+
+    updateRotationStatus(id: ID!, status: RotationStatus!): Rotation!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@updateStatus")
+
+    # ── Assignations ─────────────────────────────────────────
+    createAssignment(input: CreateAssignmentInput! @spread): Assignment!
+        @create @guard(with: ["sanctum"])
+
+    # ── Finance ──────────────────────────────────────────────
+    recordContribution(input: CreateContributionInput! @spread): Contribution!
+        @create @guard(with: ["sanctum"])
+
+    createExpense(input: CreateExpenseInput! @spread): Expense!
+        @create @guard(with: ["sanctum"])
+}
+
+# ─────────────────────────────────────────────────────────────
+#  TYPES
+# ─────────────────────────────────────────────────────────────
+
+type AuthPayload {
+    token: String!
+    user: User!
+}
+
+type CreateDahiraPayload {
+    dahira: Dahira!
+    admin_email: String!
+    admin_password: String!
+}
+
+type DashboardStats {
+    active_members_count: Int!
+    families_count: Int!
+    next_rotation: Rotation
+    monthly_contributions: Float!
+    monthly_expenses: Float!
+    balance: Float!
+}
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    dahira: Dahira @belongsTo
+    member: Member @hasOne
+    roles: [String!]!
+        @method(name: "getRoleNames")
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Dahira {
+    id: ID!
+    name: String!
+    slug: String!
+    city: String
+    country: String!
+    phone: String
+    email: String
+    logo: String
+    description: String
+    is_active: Boolean!
+    members: [Member!]! @hasMany
+    families: [Family!]! @hasMany
+    houses: [House!]! @hasMany
+    rotations: [Rotation!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Member {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    family: Family @belongsTo
+    user: User @belongsTo
+    first_name: String!
+    last_name: String!
+    full_name: String! @method(name: "getFullNameAttribute")
+    phone: String
+    email: String
+    gender: Gender!
+    profession: String
+    joined_at: Date
+    is_active: Boolean!
+    is_family_head: Boolean!
+    notes: String
+    contributions: [Contribution!]! @hasMany
+    assignments: [Assignment!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Family {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    name: String!
+    address: String
+    neighborhood: String
+    phone: String
+    capacity: Int!
+    is_available: Boolean!
+    total_received: Int!
+    last_received_at: Date
+    members: [Member!]! @hasMany
+    house: House @hasOne
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type House {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    family: Family! @belongsTo
+    label: String
+    address: String!
+    neighborhood: String
+    capacity: Int!
+    is_available: Boolean!
+    min_interval_weeks: Int!
+    rotations: [Rotation!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Rotation {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    house: House! @belongsTo
+    scheduled_date: Date!
+    status: RotationStatus!
+    attendees_count: Int
+    notes: String
+    assignments: [Assignment!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Contribution {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    member: Member! @belongsTo
+    type: ContributionType!
+    amount: Float!
+    paid_at: Date!
+    period: String
+    status: ContributionStatus!
+    notes: String
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Expense {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    user: User @belongsTo
+    label: String!
+    category: ExpenseCategory!
+    amount: Float!
+    spent_at: Date!
+    notes: String
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Assignment {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    rotation: Rotation! @belongsTo
+    member: Member! @belongsTo
+    task: TaskType!
+    completed: Boolean!
+    notes: String
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+# ─────────────────────────────────────────────────────────────
+#  ENUMS
+# ─────────────────────────────────────────────────────────────
+
+enum Gender {
+    male
+    female
+}
+
+enum RotationStatus {
+    planned
+    confirmed
+    done
+    cancelled
+}
+
+enum ContributionType {
+    cotisation
+    adiya
+    don
+    autre
+}
+
+enum ContributionStatus {
+    pending
+    paid
+    partial
+}
+
+enum ExpenseCategory {
+    nourriture
+    transport
+    materiel
+    communication
+    autre
+}
+
+enum TaskType {
+    lecture_khassaides
+    accueil
+    the_cafe
+    sonorisation
+    nettoyage
+    caisse
+    communication
+}
+
+# ─────────────────────────────────────────────────────────────
+#  INPUTS
+# ─────────────────────────────────────────────────────────────
+
+input CreateDahiraInput {
+    name: String! @rules(apply: ["min:2", "max:150"])
+    city: String @rules(apply: ["nullable", "max:100"])
+    country: String @rules(apply: ["nullable", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    email: String @rules(apply: ["nullable", "email"])
+    description: String @rules(apply: ["nullable", "max:1000"])
+    is_active: Boolean
+}
+
+input UpdateDahiraInput {
+    name: String @rules(apply: ["min:2", "max:150"])
+    city: String @rules(apply: ["nullable", "max:100"])
+    country: String @rules(apply: ["nullable", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    email: String @rules(apply: ["nullable", "email"])
+    description: String @rules(apply: ["nullable", "max:1000"])
+    is_active: Boolean
+}
+
+input CreateMemberInput {
+    dahira_id: ID!
+    family_id: ID
+    first_name: String! @rules(apply: ["min:2", "max:100"])
+    last_name: String! @rules(apply: ["min:2", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    email: String @rules(apply: ["nullable", "email", "unique:members,email"])
+    gender: Gender
+    profession: String @rules(apply: ["nullable", "max:100"])
+    joined_at: Date
+    is_family_head: Boolean
+    notes: String @rules(apply: ["nullable", "max:1000"])
+}
+
+input UpdateMemberInput {
+    family_id: ID
+    first_name: String @rules(apply: ["min:2", "max:100"])
+    last_name: String @rules(apply: ["min:2", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    email: String @rules(apply: ["nullable", "email"])
+    gender: Gender
+    profession: String @rules(apply: ["nullable", "max:100"])
+    is_active: Boolean
+    is_family_head: Boolean
+    notes: String @rules(apply: ["nullable", "max:1000"])
+}
+
+input CreateFamilyInput {
+    dahira_id: ID!
+    name: String! @rules(apply: ["min:2", "max:150"])
+    address: String @rules(apply: ["nullable", "max:255"])
+    neighborhood: String @rules(apply: ["nullable", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
+    is_available: Boolean
+}
+
+input UpdateFamilyInput {
+    name: String @rules(apply: ["min:2", "max:150"])
+    address: String @rules(apply: ["nullable", "max:255"])
+    neighborhood: String @rules(apply: ["nullable", "max:100"])
+    phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
+    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
+    is_available: Boolean
+}
+
+input CreateHouseInput {
+    dahira_id: ID!
+    family_id: ID!
+    label: String @rules(apply: ["nullable", "max:150"])
+    address: String! @rules(apply: ["min:5", "max:255"])
+    neighborhood: String @rules(apply: ["nullable", "max:100"])
+    capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
+    min_interval_weeks: Int @rules(apply: ["nullable", "integer", "min:1", "max:52"])
+}
+
+input CreateAssignmentInput {
+    dahira_id: ID!
+    rotation_id: ID!
+    member_id: ID!
+    task: TaskType!
+    notes: String
+}
+
+input CreateContributionInput {
+    dahira_id: ID!
+    member_id: ID!
+    type: ContributionType! @rules(apply: ["required"])
+    amount: Float! @rules(apply: ["numeric", "min:0.01"])
+    paid_at: Date!
+    period: String @rules(apply: ["nullable", "max:20"])
+    status: ContributionStatus! @rules(apply: ["required"])
+    notes: String @rules(apply: ["nullable", "max:1000"])
+}
+
+input CreateExpenseInput {
+    dahira_id: ID!
+    label: String! @rules(apply: ["min:2", "max:255"])
+    category: ExpenseCategory! @rules(apply: ["required"])
+    amount: Float! @rules(apply: ["numeric", "min:0.01"])
+    spent_at: Date!
+    notes: String @rules(apply: ["nullable", "max:1000"])
+}

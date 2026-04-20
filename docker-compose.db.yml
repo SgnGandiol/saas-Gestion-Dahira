@@ -1,0 +1,34 @@
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  db:
+    env_file:
+      - .env
+    image: postgres:16-alpine
+    container_name: sgd_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_DATABASE:-sgd}
+      POSTGRES_USER:     ${DB_USERNAME:-sgd_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sgd_secret}
+    ports:
+      - "5432:5432"       # accès local (TablePlus, DBeaver…)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sgd_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sgd_user} -d ${DB_DATABASE:-sgd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ── Volumes persistants ──────────────────────────────────────
+volumes:
+  pgdata:
+    driver: local
+
+# ── Réseau interne ───────────────────────────────────────────
+networks:
+  sgd_network:
+    driver: bridge

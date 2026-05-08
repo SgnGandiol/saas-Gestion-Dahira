@@ -4,11 +4,11 @@ export const RECORD_CONTRIBUTION = gql`
   mutation RecordContribution(
     $dahira_id: ID!
     $member_id: ID!
-    $type: ContributionType
+    $type: ContributionType!
     $amount: Float!
     $paid_at: Date!
     $period: String
-    $status: ContributionStatus
+    $status: ContributionStatus!
     $notes: String
   ) {
     recordContribution(input: {
@@ -36,7 +36,7 @@ export const CREATE_EXPENSE = gql`
   mutation CreateExpense(
     $dahira_id: ID!
     $label: String!
-    $category: ExpenseCategory
+    $category: ExpenseCategory!
     $amount: Float!
     $spent_at: Date!
     $notes: String

@@ -30,6 +30,10 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# Copy composer files and install dependencies
+COPY composer.json composer.lock ./
+RUN composer install --no-scripts --no-autoloader
+
 # ─────────────────────────────────────────────
 #  Stage 2 : développement (hot reload, xdebug)
 # ─────────────────────────────────────────────
@@ -38,8 +42,10 @@ FROM base AS development
 # Xdebug pour le debug local
 RUN pecl install xdebug && docker-php-ext-enable xdebug
 
-COPY docker/php/php-dev.ini /usr/local/etc/php/conf.d/custom.ini
-COPY docker/php/www.conf    /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/php-dev.ini  /usr/local/etc/php/conf.d/custom.ini
+COPY docker/php/www.conf     /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 9000
-CMD ["php-fpm"]
+ENTRYPOINT ["/entrypoint.sh"]

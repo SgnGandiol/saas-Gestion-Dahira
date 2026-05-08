@@ -8,13 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Dahira } from '@/types'
 
 const dahiraSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
-  city: z.string().optional().or(z.literal('')),
-  country: z.string().optional().or(z.literal('')),
-  phone: z.string().regex(/^\+?[0-9\s\-]{7,20}$/, 'Téléphone invalide').optional().or(z.literal('')),
-  email: z.string().email('Email invalide').optional().or(z.literal('')),
+  name:        z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  city:        z.string().optional().or(z.literal('')),
+  country:     z.string().optional().or(z.literal('')),
+  phone:       z.string().regex(/^\+?[0-9\s\-]{7,20}$/, 'Téléphone invalide').optional().or(z.literal('')),
+  email:       z.string().email('Email invalide').optional().or(z.literal('')),
   description: z.string().optional().or(z.literal('')),
-  is_active: z.boolean(),
+  is_active:   z.boolean(),
+  // Champs admin — requis uniquement à la création
+  admin_name:     z.string().min(2, 'Nom requis').optional().or(z.literal('')),
+  admin_email:    z.string().email('Email invalide').optional().or(z.literal('')),
+  admin_password: z.string().min(8, 'Minimum 8 caractères').optional().or(z.literal('')),
 })
 
 export type DahiraFormData = z.infer<typeof dahiraSchema>
@@ -31,13 +35,13 @@ export function DahiraForm({ dahira, onSubmit, isLoading = false, error }: Dahir
     resolver: zodResolver(dahiraSchema),
     defaultValues: dahira
       ? {
-          name: dahira.name,
-          city: dahira.city || '',
-          country: dahira.country || '',
-          phone: dahira.phone || '',
-          email: dahira.email || '',
+          name:        dahira.name,
+          city:        dahira.city || '',
+          country:     dahira.country || '',
+          phone:       dahira.phone || '',
+          email:       dahira.email || '',
           description: (dahira as any).description || '',
-          is_active: dahira.is_active,
+          is_active:   dahira.is_active,
         }
       : { is_active: true, country: 'Sénégal' },
   })
@@ -111,6 +115,52 @@ export function DahiraForm({ dahira, onSubmit, isLoading = false, error }: Dahir
           Dahira active
         </label>
       </div>
+
+      {!dahira && (
+        <div className="space-y-4 border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Compte administrateur
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nom complet <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              placeholder="Serigne Modou Ndiaye"
+              {...register('admin_name')}
+              disabled={isLoading}
+            />
+            {errors.admin_name && <p className="mt-1 text-xs text-red-600">{errors.admin_name.message}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email admin <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="email"
+                placeholder="admin@dahira.sn"
+                {...register('admin_email')}
+                disabled={isLoading}
+              />
+              {errors.admin_email && <p className="mt-1 text-xs text-red-600">{errors.admin_email.message}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mot de passe <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="password"
+                placeholder="Min. 8 caractères"
+                {...register('admin_password')}
+                disabled={isLoading}
+              />
+              {errors.admin_password && <p className="mt-1 text-xs text-red-600">{errors.admin_password.message}</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Button
         type="submit"

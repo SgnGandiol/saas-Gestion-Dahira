@@ -13,16 +13,19 @@ import {
   LayoutDashboard,
   Building2,
   X,
+  Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
 import { apolloClient } from '@/lib/apollo'
 import { useMutation } from '@apollo/client/react'
 import { LOGOUT_MUTATION } from '@/graphql/mutations/auth'
+import { Logo } from '@/components/layout/Logo'
 
 const navItems = [
   { href: '/dashboard',             label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/dashboard/members',     label: 'Membres',         icon: Users },
+  { href: '/dashboard/categories',  label: 'Catégories',      icon: Tag },
   { href: '/dashboard/maisons',     label: 'Maisons',         icon: Home },
   { href: '/dashboard/rotations',   label: 'Tours',           icon: RotateCcw },
   { href: '/dashboard/finance',     label: 'Finance',         icon: DollarSign },
@@ -54,9 +57,7 @@ export function Sidebar({ onClose }: SidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 shrink-0">
-          <span className="text-white font-bold text-sm">SGD</span>
-        </div>
+        <Logo size={36} className="shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">
             {user?.dahira?.name ?? 'Mon Dahira'}

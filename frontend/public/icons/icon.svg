@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#059669"/>
+  <!-- Crescent moon (top) -->
+  <circle cx="256" cy="160" r="90" fill="white"/>
+  <circle cx="296" cy="140" r="75" fill="#059669"/>
+  <!-- Star below crescent -->
+  <polygon points="256,240 264,265 291,265 270,281 278,306 256,290 234,306 242,281 221,265 248,265"
+    fill="white"/>
+  <!-- SGD text -->
+  <text x="256" y="420" font-family="Arial Black, Arial, sans-serif"
+    font-size="110" font-weight="900" fill="white" text-anchor="middle" letter-spacing="4">SGD</text>
+</svg>

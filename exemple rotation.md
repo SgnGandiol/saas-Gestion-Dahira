@@ -1,338 +1,131 @@
-Crée un **module Finance complet, moderne et scalable** pour une application de gestion de Dahira / Rotations religieuses, avec **Angular 19 + Angular Material + TailwindCSS + Laravel GraphQL + PostgreSQL**, orienté **UX fluide, saisie rapide, statistiques intelligentes et gestion multi-événements**.
+Je veux implémenter un MODULE INTELLIGENT DE REPLANIFICATION DES TOURS (rotations hebdomadaires entre maisons).
 
----
+CONTEXTE MÉTIER :
+- Chaque dimanche, un tour est organisé dans une maison.
+- Chaque membre appartient à une maison.
+- Une maison peut contenir plusieurs membres.
+- Tous les membres doivent passer équitablement.
+- Personne ne doit recevoir 2 tours avant qu’un autre n’ait reçu le sien.
+- En cas d’imprévu, le système doit recalculer intelligemment le planning.
 
-# 🎯 OBJECTIF GLOBAL
+OBJECTIF :
+Créer un moteur de replanification automatique avec plusieurs scénarios.
 
-Le module Finance doit permettre de gérer :
+==================================================
+CAS À GÉRER
+==================================================
 
-## 1️⃣ Cotisations obligatoires des Tours Hebdomadaires
-
-À chaque tour :
-
-* Chaque **grand membre** doit cotiser **200 FCFA**
-* Chaque **petit membre** doit cotiser **50 ou 100 FCFA** selon sa catégorie
-* Cette somme est automatiquement affectée au :
-
-### ➜ Fonds Ziar Annuel
-
-Donc chaque tour alimente automatiquement la caisse annuelle.
-
----
-
-## 2️⃣ Autres événements financiers
-
-Créer aussi la gestion des cotisations pour :
-
-### ✔ Thiant
-
+CAS A — Membre indisponible longtemps à l’avance
 Exemple :
+26 avril = Issa
+03 mai = Modou
 
-* Budget fixé : **40 000 FCFA**
-* Chaque membre cotise selon son rythme
-* Date limite / clôture définie
-* Suivi du reste à payer
-* Pourcentage atteint
+Issa prévient 10 jours avant.
 
-### ✔ Petit Ziar
+Solution :
+26 avril = Modou
+03 mai = Issa
 
-### ✔ Social
+--------------------------------------------------
 
-(le social reste séparé du Ziar Annuel)
+CAS B — Absence dernière minute
+Le membre annule samedi soir pour dimanche.
 
-### ✔ Autres événements personnalisés
+Solution :
+26 avril = Siège Dahira
 
----
+Le reste du planning reste inchangé.
 
-# 🧱 STRUCTURE UI / UX PRINCIPALE
+--------------------------------------------------
 
-Créer une page :
+CAS C — Maison indisponible mais membre disponible
+Travaux / manque de place / décès familial.
 
-# 📌 Finance Dashboard
+Solution :
+Tour déplacé :
+- siège dahira
+ou
+- maison liée
 
-Avec onglets :
+Le membre garde son tour.
 
-```text
-[ Tours ] [ Ziar Annuel ] [ Événements ] [ Social ] [ Statistiques ]
-```
+--------------------------------------------------
 
----
+CAS D — Échange entre deux membres
 
-# 1️⃣ ONGLET TOURS (Ultra important)
+Issa veut mai
+Modou veut avril
 
-Afficher liste des tours :
+Solution :
+Swap entre deux dates.
 
-```text
-26 Avril 2026 - Maison Guene
-03 Mai 2026 - Maison Abdou Diop
-10 Mai 2026 - Maison Faye
-```
+--------------------------------------------------
 
-Quand on clique :
+CAS E — Retards répétés / absences fréquentes
 
-### Drawer latéral / modal moderne :
+Solution :
+- baisser priorité
+- suspendre temporairement
+- validation admin obligatoire
 
-```text
-Tour du 26 Avril
-Maison Guene
-```
+--------------------------------------------------
 
-Puis tableau intelligent :
+CAS F — Grand événement religieux
 
-| Membre     | Catégorie | Montant attendu | Payé ? | Saisie rapide |
-| ---------- | --------- | --------------- | ------ | ------------- |
-| Papa Guene | Grand     | 200             | ✅      | input         |
-| Baye Guene | Grand     | 200             | ❌      | input         |
+Ramadan / Magal / Gamou / Tabaski
 
-### UX idéale :
+Solution :
+- pause planning
+- tours au siège
+- regroupement
 
-* bouton :
+--------------------------------------------------
 
-```text
-[Tout valider à 200]
-```
+CAS G — Pluie / urgence / impossibilité générale
 
-* auto-remplissage
-* clavier rapide
-* navigation tab
-* validation instantanée
-* badge :
+Solution :
+Tour automatique au siège ou report.
 
-```text
-2/5 payé
-400 FCFA collecté
-```
+--------------------------------------------------
 
----
+CAS H — Nouvelle maison ajoutée
 
-# 2️⃣ ONGLET ZIAR ANNUEL
+Solution :
+Insérer intelligemment sans casser l’équité.
 
-Dashboard premium :
+--------------------------------------------------
 
-```text
-Total caisse : 185 500 FCFA
-Tours effectués : 26
-Membres cotisants : 18
-Retards : 3
-```
+CAS I — Maison supprimée / membre quitte dahira
 
-Graphiques :
+Solution :
+Retirer de la rotation et recalcul automatique.
 
-### 📈 Évolution mensuelle
+==================================================
+RÈGLES MÉTIER IMPORTANTES
+==================================================
 
-### 📊 Contribution par membre
+1. Tout le monde doit passer.
+2. Aucun membre ne passe 2 fois avant un autre.
+3. Le dahira doit toujours pouvoir se tenir.
+4. Priorité à la stabilité du planning.
+5. Respect du min_interval_weeks entre deux passages.
+6. Historique conservé.
 
-### 🥧 Répartition maisons
+==================================================
+ALGORITHME INTELLIGENT SOUHAITÉ
+==================================================
 
----
+Chaque candidat reçoit un score :
 
-# 3️⃣ ONGLET ÉVÉNEMENTS
-
-Liste :
-
-```text
-Thiant Gamou
-Petit Ziar Médina
-Construction
-```
-
-Bouton :
-
-```text
-+ Nouvel événement
-```
-
-Formulaire :
-
-```text
-Nom
-Type
-Budget cible
-Date début
-Date clôture
-Description
-```
-
----
-
-### Exemple Thiant 40 000 FCFA
-
-Vue :
-
-```text
-Collecté : 28 500
-Reste : 11 500
-71% atteint
-Date clôture : 20 Juin
-```
-
-Puis tableau cotisation :
-
-| Membre | Donné | Reste |
-| ------ | ----- | ----- |
-
-Boutons :
-
-```text
-+ Ajouter versement
-Relancer retardataires
-Clôturer événement
-Exporter PDF
-```
-
----
-
-# 4️⃣ ONGLET SOCIAL
-
-Séparé comptablement :
-
-```text
-Entrées
-Dépenses
-Aides accordées
-Solde social
-```
-
-Exemple :
-
-```text
-Aide maladie : -10 000
-Contribution sociale : +20 000
-```
-
----
-
-# 5️⃣ ONGLET STATISTIQUES
-
-KPIs :
-
-```text
-Top cotisant
-Maison la plus régulière
-Taux global de paiement
-Montant annuel prévisionnel
-Retards actuels
-```
-
-Graphiques modernes.
-
----
-
-# 🧠 UX HAUT NIVEAU À IMPLÉMENTER
-
-## Saisie ultra rapide mobile + desktop
-
-* inline edit
-* checkbox payé
-* input intelligent
-* auto-save
-* snackbar succès
-
-## Filtres :
-
-```text
-Mois
-Maison
-Membre
-Type événement
-Payé / Non payé
-```
-
-## Recherche instantanée
-
-## Dark mode élégant
-
-## Responsive total
-
----
-
-# 💾 BASE DE DONNÉES CONSEILLÉE
-
-## tables :
-
-### members
-
-### tours
-
-### finance_transactions
-
-```text
-id
-member_id
-rotation_id nullable
-event_id nullable
-type (tour, ziar, thiant, social)
-amount
-date
-status
-method
-notes
-```
-
-### finance_events
-
-```text
-id
-name
-type
-target_amount
-current_amount
-deadline
-status
-```
-
----
-
-# ⚙️ BACKEND LOGIQUE
-
-Quand paiement tour validé :
-
-```php
-create transaction(type='tour')
-credit ziar_annuel_wallet
-```
-
-Quand versement Thiant :
-
-```php
-create transaction(type='thiant')
-update progress
-```
-
----
-
-# 🎨 DESIGN SYSTEM
-
-Couleurs :
-
-```text
-Vert = payé
-Rouge = retard
-Bleu = caisse
-Or = Ziar Annuel
-Violet = Social
-```
-
-Cards premium :
-
-* rounded-2xl
-* shadow-xl
-* glassmorphism léger
-
----
-
-# 🚀 BONUS INTELLIGENT
-
-Ajouter IA prédictive :
-
-```text
-Si rythme actuel continue :
-Ziar annuel atteindra 420 000 FCFA
-```
-
----
-
-# 📌 RÉSULTAT ATTENDU
-
-Un module finance digne :
-
++ disponibilité
++ ancienneté sans tour
++ maison grande capacité
++ proximité géographique
++ peu de passages récents
++ stabilité du calendrier
+
+- déjà passé récemment
+- absent fréquent
+- changement trop perturbant
+
+Choisir le meilleur score.

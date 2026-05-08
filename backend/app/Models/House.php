@@ -17,12 +17,13 @@ class House extends Model
     protected $fillable = [
         'dahira_id', 'label', 'address',
         'neighborhood', 'latitude', 'longitude',
-        'capacity', 'is_available', 'min_interval_weeks',
+        'capacity', 'is_available', 'is_headquarters', 'min_interval_weeks',
         'total_received', 'last_received_at',
     ];
 
     protected $casts = [
         'is_available'    => 'boolean',
+        'is_headquarters' => 'boolean',
         'latitude'        => 'decimal:7',
         'longitude'       => 'decimal:7',
         'last_received_at' => 'date',

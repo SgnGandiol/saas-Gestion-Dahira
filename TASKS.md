@@ -1,6 +1,6 @@
 # SGD — Priorisation des tâches
 
-> Mis à jour : 17 avril 2026 — Blocs A, B, C, D complétés  
+> Mis à jour : 8 mai 2026 — Blocs A→G + J + K complétés. Bloc L complété (Moteur de Rotation Intelligent)  
 > Stack : Laravel 12 · GraphQL · Next.js 16
 
 ---
@@ -163,7 +163,65 @@ BLOC A (backend logique métier)
 
 ---
 
-## BLOC I — Fonctionnalités futures
+## BLOC J — Finance v2 : Module complet multi-onglets
+
+> Refonte totale de la page Finance pour couvrir les cotisations de tours, le Ziar Annuel, les événements (Thiant, Petit Ziar…) et le Social.  
+> Référence : `exemple rotation.md`
+
+### J — Backend Laravel / GraphQL
+
+| # | Tâche | Priorité | Status |
+|---|-------|----------|--------|
+| J1 | Ajouter `category` (grand / petit) + `weekly_amount` sur `members` — migration + fillable + GraphQL type | 🔴 CRITIQUE | ⬜ |
+| J2 | Créer migration `finance_events` (id, dahira_id, name, type, target_amount, collected_amount, deadline, status) | 🔴 CRITIQUE | ⬜ |
+| J3 | Refactorer migration `contributions` → `finance_transactions` : ajouter `event_id nullable`, `rotation_id nullable`, `type` enum (tour / ziar / thiant / social / autre) | 🔴 CRITIQUE | ⬜ |
+| J4 | Créer modèles `FinanceEvent` + `FinanceTransaction` avec relations Dahira / Member / Rotation | 🔴 CRITIQUE | ⬜ |
+| J5 | GraphQL mutations : `createFinanceEvent`, `updateFinanceEvent`, `deleteFinanceEvent`, `recordTourPayments` (bulk — valider plusieurs membres d'un tour en une requête) | 🔴 CRITIQUE | ⬜ |
+| J6 | GraphQL queries : `financeEvents`, `tourPaymentStatus(rotation_id)`, `ziarAnnuelStats`, `socialStats` | 🔴 CRITIQUE | ⬜ |
+| J7 | Logique métier : quand un paiement de tour est validé → créer automatiquement une transaction `type=ziar` qui crédite le Ziar Annuel | 🟠 HAUTE | ⬜ |
+| J8 | Logique métier : calculer `collected_amount` sur `finance_events` en temps réel (trigger ou accessor Eloquent) | 🟠 HAUTE | ⬜ |
+| J9 | GraphQL query `financeStats` : top cotisant, maison la plus régulière, taux global paiement, montant annuel prévisionnel, retards actuels | 🟡 MOYEN | ⬜ |
+
+### J — Frontend Next.js
+| # | Tâche | Priorité | Status |
+|---|-------|----------|--------|
+| J10 | Mettre à jour `types/index.ts` : `MemberCategory` → fait dans BLOC K | 🔴 CRITIQUE | ✅ |
+| J11 | Créer `graphql/queries/finance-v2.ts` (voir BLOC K + rotations query enrichie) | 🔴 CRITIQUE | 🔄 |
+| J12 | Créer `graphql/mutations/finance-v2.ts` : `RECORD_TOUR_PAYMENTS` bulk → backend à faire (J5) | 🔴 CRITIQUE | ⬜ |
+| J13 | Refactorer `/dashboard/finance/page.tsx` → layout 5 onglets : **Tours · Ziar Annuel · Événements · Social · Statistiques** | 🔴 CRITIQUE | ✅ |
+| J14 | **Onglet Tours** : liste des rotations cliquables → drawer avec tableau membres (catégorie, montant attendu, payé ✅/❌, saisie rapide, « Tout valider ») | 🔴 CRITIQUE | ✅ |
+| J15 | **Onglet Ziar Annuel** : KPIs (total caisse, tours effectués, membres cotisants, en attente) + liste des cotisations | 🟠 HAUTE | ✅ |
+| J16 | **Onglet Événements** : exemples statiques + message "bientôt" — backend `finance_events` requis pour version complète | 🟠 HAUTE | 🔄 |
+| J17 | **Onglet Social** : filtre adiya/don + KPIs + table | 🟠 HAUTE | ✅ |
+| J18 | **Onglet Statistiques** : top cotisants, taux paiement, prévisionnel IA, chart barres | 🟡 MOYEN | ✅ |
+| J19 | UX saisie rapide mobile : inline edit, auto-save, navigation Tab entre cellules, snackbar succès | 🟡 MOYEN | ⬜ |
+| J20 | Filtres transversaux : Mois / Maison / Membre / Type événement / Payé–Non payé + recherche instantanée | 🟡 MOYEN | ⬜ |
+
+---
+
+## BLOC K — Module Catégories de Membres
+
+> Permet d'associer une cotisation hebdomadaire attendue par membre (Grand=200, Moyen=100, Petit=50 FCFA)
+
+| # | Tâche | Priorité | Status |
+|---|-------|----------|--------|
+| K1 | Migration `create_member_categories_table` (dahira_id, name, label, weekly_amount, color, is_default, sort_order) | 🔴 CRITIQUE | ✅ |
+| K2 | Migration `add_member_category_id_to_members` (FK nullable → nullOnDelete) | 🔴 CRITIQUE | ✅ |
+| K3 | Modèle `MemberCategory.php` avec TenantScope + fillable + casts | 🔴 CRITIQUE | ✅ |
+| K4 | `Member.php` → ajouter `member_category_id` au fillable + relation `category()` | 🔴 CRITIQUE | ✅ |
+| K5 | `DahiraMutation.php` → seed 3 catégories par défaut (Grand/Moyen/Petit) à la création d'une Dahira | 🟠 HAUTE | ✅ |
+| K6 | `schema.graphql` → type `MemberCategory`, query `memberCategories`, mutations CRUD, inputs, `category` sur `Member`, `member_category_id` sur inputs | 🔴 CRITIQUE | ✅ |
+| K7 | Frontend `types/index.ts` → interface `MemberCategory`, champ `category?` sur `Member` | 🔴 CRITIQUE | ✅ |
+| K8 | Frontend `graphql/queries/categories.ts` + `mutations/categories.ts` | 🔴 CRITIQUE | ✅ |
+| K9 | Frontend `/dashboard/categories/page.tsx` — CRUD catégories avec color picker | 🟠 HAUTE | ✅ |
+| K10 | Sidebar → lien "Catégories" | 🟠 HAUTE | ✅ |
+| K11 | `MemberForm.tsx` / `MemberModal.tsx` → sélecteur catégorie + `member_category_id` dans mutations | 🟠 HAUTE | ✅ |
+| K12 | Liste membres → badge coloré catégorie (mobile + desktop colonne) | 🟡 MOYEN | ✅ |
+| K13 | `GET_MEMBERS` query → inclure `category { id name label color weekly_amount }` | 🟡 MOYEN | ✅ |
+
+---
+
+## BLOC J — Finance v2 : Module complet multi-onglets
 
 | # | Tâche | Priorité | Status |
 |---|-------|----------|--------|
@@ -174,6 +232,34 @@ BLOC A (backend logique métier)
 | I5 | Rotations récurrentes automatiques (planning multi-semaines) | 🟢 BAS | ⬜ |
 | I6 | Filtres avancés sur les listes (quartier, statut, période) | 🟢 BAS | ⬜ |
 | I7 | Graphiques dashboard (évolution cotisations, taux de présence) | 🟢 BAS | ⬜ |
+
+---
+
+## BLOC L — Moteur de Rotation Intelligent
+
+> Implémentation du moteur complet : score composite, replanning, rebuild, logs  
+> Référence : `# 🎯 Solution globale à implémenter pour.md` + `prompt_amelioration_algo.md`
+
+### L — Backend Laravel
+
+| # | Tâche | Priorité | Status |
+|---|-------|----------|--------|
+| L1 | Migration : `availability_status`, `absence_frequency`, `priority_score` sur `members` · `is_headquarters` sur `houses` · table `rotation_logs` · tables `rotation_rebuilds` + `rotation_rebuild_items` | 🔴 CRITIQUE | ✅ |
+| L2 | `RotationService.php` — score composite membre (35% jours sans tour · 25% dispo · 20% absences · 15% récence · 5% suspension) remplace le tri simple | 🔴 CRITIQUE | ✅ |
+| L3 | `RotationReplannerService.php` — `detectProblem` · `classifyGravity` · `generateSolutions` (swap/siège/report/smart_swap) · `scoreSolution` · `suggestBestSolution` | 🔴 CRITIQUE | ✅ |
+| L4 | `RotationPlannerService.php` — `previewRebuild` · `applyRebuild` · `cancelRebuild` · zones verrouillée (<2 sem) / flexible | 🔴 CRITIQUE | ✅ |
+| L5 | `RotationLogService.php` — `logChange` · `getHistory` · traçabilité complète | 🟠 HAUTE | ✅ |
+| L6 | Statuts enrichis : Rotation (+`ongoing` `rescheduled` `headquarters`) · Member (`availability_status`: available/unavailable/travel/sick/suspended) | 🟠 HAUTE | ✅ |
+| L7 | `schema.graphql` — nouveaux types/enums/mutations : `suggestSolution` · `previewRebuild` · `applyRebuild` · `cancelRebuild` · `setMemberAvailability` | 🟠 HAUTE | ✅ |
+
+### L — Frontend Next.js
+
+| # | Tâche | Priorité | Status |
+|---|-------|----------|--------|
+| L8 | Page Membres — badge + selector `availability_status` (disponible / absent / voyage / malade / suspendu) | 🟠 HAUTE | ⬜ |
+| L9 | Page Rotations — bouton "Siège / Solution" sur chaque tour : modal avec solutions scorées et confirmation | 🟠 HAUTE | ⬜ |
+| L10 | Page Rotations — bouton "🔄 Recréer le planning" : modal prévisualisation diff avant/après + modes + apply | 🟠 HAUTE | ⬜ |
+| L11 | Page Rotations — historique des modifications par tour (onglet ou drawer) | 🟡 MOYEN | ⬜ |
 
 ---
 

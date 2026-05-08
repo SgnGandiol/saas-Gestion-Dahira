@@ -1,0 +1,264 @@
+
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; }
+.wrap { padding: 1rem 0; font-size: 14px; color: var(--color-text-primary); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+.card-head { padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.card-head i { font-size: 18px; }
+.card-title { font-weight: 500; font-size: 14px; }
+.card-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--border-radius-md); background: var(--color-background-secondary); }
+.row i { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+.row-text { display: flex; flex-direction: column; gap: 2px; }
+.row-label { font-size: 13px; font-weight: 500; }
+.row-sub { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+.badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; margin-top: 3px; }
+
+.head-danger  { background: var(--color-background-danger);  color: var(--color-text-danger);  }
+.head-warning { background: var(--color-background-warning); color: var(--color-text-warning); }
+.head-info    { background: var(--color-background-info);    color: var(--color-text-info);    }
+.head-success { background: var(--color-background-success); color: var(--color-text-success); }
+.head-purple  { background: #EEEDFE; color: #3C3489; }
+
+.b-danger  { background: var(--color-background-danger);  color: var(--color-text-danger);  }
+.b-warning { background: var(--color-background-warning); color: var(--color-text-warning); }
+.b-info    { background: var(--color-background-info);    color: var(--color-text-info);    }
+.b-success { background: var(--color-background-success); color: var(--color-text-success); }
+.b-purple  { background: #EEEDFE; color: #3C3489; }
+
+.btn { margin-top: 4px; padding: 5px 12px; font-size: 12px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.btn:hover { background: var(--color-background-secondary); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 2px; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--color-text-secondary); }
+.leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>
+
+<div class="wrap">
+  <h2 class="sr-only">Cas de figure pour changer le planning d'un Dahira</h2>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--color-background-danger)"></div> Niveau élevé — rebuild global</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--color-background-warning)"></div> Niveau moyen — report / swap</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--color-background-info)"></div> Niveau faible — permutation simple</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--color-background-success)"></div> Structurel — nouveau règlement</div>
+    <div class="leg"><div class="leg-dot" style="background:#EEEDFE"></div> Saisonnier — événement religieux</div>
+  </div>
+
+  <div style="height:10px"></div>
+
+  <div class="grid">
+
+    <!-- CARTE 1 : ABSENCE MEMBRE -->
+    <div class="card">
+      <div class="card-head head-warning">
+        <i class="ti ti-user-off" aria-hidden="true"></i>
+        <span class="card-title">Absence d'un membre</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-clock" aria-hidden="true" style="color:var(--color-text-warning)"></i>
+          <div class="row-text">
+            <span class="row-label">Absence annoncée à l'avance</span>
+            <span class="row-sub">Voyage, maladie programmée, événement familial connu.</span>
+            <span class="badge b-info">swap_next — permuter avec le suivant</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Absence de dernière minute</span>
+            <span class="row-sub">Imprévu le jour même, aucun préavis.</span>
+            <span class="badge b-warning">headquarters — tour au siège</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-repeat" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Absences répétées (3+)</span>
+            <span class="row-sub">Le membre perturbe l'équité globale.</span>
+            <span class="badge b-danger">rebuild — rééquilibrage global</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment coder la détection des absences répétées dans RotationReplannerService ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+    <!-- CARTE 2 : MEMBRES -->
+    <div class="card">
+      <div class="card-head head-success">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        <span class="card-title">Changement de membres</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-user-plus" aria-hidden="true" style="color:var(--color-text-success)"></i>
+          <div class="row-text">
+            <span class="row-label">Nouveau membre ajouté</span>
+            <span class="row-sub">Insérer intelligemment dans la file de priorité.</span>
+            <span class="badge b-success">insertion — recalcul score priorité</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-user-minus" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Membre supprimé / suspendu</span>
+            <span class="row-sub">Ses tours futurs sont redistribués.</span>
+            <span class="badge b-danger">rebuild — redistribution tours</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-home-off" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Maison supprimée</span>
+            <span class="row-sub">Maison déménagée, incendie, inaccessible.</span>
+            <span class="badge b-danger">rebuild — redistribution immédiate</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment gérer l\'ajout d\'un nouveau membre sans perturber l\'équité du planning existant ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+    <!-- CARTE 3 : ÉVÉNEMENTS RELIGIEUX -->
+    <div class="card">
+      <div class="card-head head-purple">
+        <i class="ti ti-star" aria-hidden="true"></i>
+        <span class="card-title">Événements religieux</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-moon" aria-hidden="true" style="color:#534AB7"></i>
+          <div class="row-text">
+            <span class="row-label">Ramadan</span>
+            <span class="row-sub">Période de 30 jours à bloquer ou à adapter.</span>
+            <span class="badge b-purple">rebuild saisonnier — avant/après Ramadan</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-flag" aria-hidden="true" style="color:#534AB7"></i>
+          <div class="row-text">
+            <span class="row-label">Magal / Gamou / Ziar</span>
+            <span class="row-sub">Déplacements massifs, disponibilités réduites.</span>
+            <span class="badge b-purple">postpone — reporter les tours concernés</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-calendar-event" aria-hidden="true" style="color:#534AB7"></i>
+          <div class="row-text">
+            <span class="row-label">Thiant / événement spécial</span>
+            <span class="row-sub">Tour remplacé par un événement collectif.</span>
+            <span class="badge b-purple">event_override — tour suspendu temporairement</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment intégrer les événements religieux récurrents dans le moteur de planification ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+    <!-- CARTE 4 : RÈGLEMENT -->
+    <div class="card">
+      <div class="card-head head-success">
+        <i class="ti ti-settings" aria-hidden="true"></i>
+        <span class="card-title">Changement de règlement</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-arrows-right-left" aria-hidden="true" style="color:var(--color-text-success)"></i>
+          <div class="row-text">
+            <span class="row-label">Intervalle minimum modifié</span>
+            <span class="row-sub">Ex. min_interval_weeks passe de 6 à 8 semaines.</span>
+            <span class="badge b-success">rebuild — recalcul avec nouveau paramètre</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-scale" aria-hidden="true" style="color:var(--color-text-success)"></i>
+          <div class="row-text">
+            <span class="row-label">Nouveau critère d'équité</span>
+            <span class="row-sub">Ex. priorité aux membres les plus anciens.</span>
+            <span class="badge b-success">rebuild — recalcul score priorité</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-adjustments" aria-hidden="true" style="color:var(--color-text-warning)"></i>
+          <div class="row-text">
+            <span class="row-label">Nouveau type de cotisation</span>
+            <span class="row-sub">Changement montant, catégorie, ou fréquence.</span>
+            <span class="badge b-warning">finance_update — pas de rebuild planning</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment appliquer un nouveau min_interval_weeks sans écraser les tours déjà confirmés ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+    <!-- CARTE 5 : DÉSORGANISATION -->
+    <div class="card">
+      <div class="card-head head-danger">
+        <i class="ti ti-alert-circle" aria-hidden="true"></i>
+        <span class="card-title">Planning devenu injuste</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-chart-bar" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Déséquilibre détecté</span>
+            <span class="row-sub">Certains membres ont 2 tours, d'autres zéro.</span>
+            <span class="badge b-danger">rebuild équilibré — fairness engine</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-refresh" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Trop de reports successifs</span>
+            <span class="row-sub">Le calendrier est fragmenté, dates incohérentes.</span>
+            <span class="badge b-danger">rebuild stable — change le minimum</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-swap" aria-hidden="true" style="color:var(--color-text-warning)"></i>
+          <div class="row-text">
+            <span class="row-label">Demande de swap volontaire</span>
+            <span class="row-sub">Deux membres veulent échanger leurs dates.</span>
+            <span class="badge b-info">smart_swap — scorer les deux candidats</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment détecter automatiquement qu\'un planning est devenu injuste et déclencher un rebuild ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+    <!-- CARTE 6 : CAS EXTERNES -->
+    <div class="card">
+      <div class="card-head head-danger">
+        <i class="ti ti-cloud-storm" aria-hidden="true"></i>
+        <span class="card-title">Imprévus externes</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <i class="ti ti-droplets" aria-hidden="true" style="color:var(--color-text-info)"></i>
+          <div class="row-text">
+            <span class="row-label">Météo / catastrophe</span>
+            <span class="row-sub">Pluie intense, inondation, accès impossible.</span>
+            <span class="badge b-warning">postpone — reporter à la semaine suivante</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-candle" aria-hidden="true" style="color:var(--color-text-secondary)"></i>
+          <div class="row-text">
+            <span class="row-label">Décès dans la famille</span>
+            <span class="row-sub">Deuil, membre ou proche décédé.</span>
+            <span class="badge b-warning">skip_temporary — membre sauté ce tour</span>
+          </div>
+        </div>
+        <div class="row">
+          <i class="ti ti-virus" aria-hidden="true" style="color:var(--color-text-danger)"></i>
+          <div class="row-text">
+            <span class="row-label">Maladie / épidémie</span>
+            <span class="row-sub">Membre ou foyer en quarantaine.</span>
+            <span class="badge b-danger">rebuild urgent — recalcul immédiat</span>
+          </div>
+        </div>
+        <button class="btn" onclick="sendPrompt('Comment coder le cas postpone et skip_temporary dans RotationReplannerService ?')">Voir l\'implémentation ↗</button>
+      </div>
+    </div>
+
+  </div>
+</div>

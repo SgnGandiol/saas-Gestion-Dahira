@@ -20,6 +20,10 @@ type Query {
 
     member(id: ID! @eq): Member @find @guard(with: ["sanctum"])
 
+    # Catégories de membres
+    memberCategories(dahira_id: ID! @eq): [MemberCategory!]!
+        @all @guard(with: ["sanctum"])
+
     # Maisons
     houses(dahira_id: ID! @eq): [House!]!
         @paginate(defaultCount: 20) @guard(with: ["sanctum"])
@@ -29,11 +33,17 @@ type Query {
         @paginate(defaultCount: 20) @guard(with: ["sanctum"])
 
     # Finance
-    contributions(dahira_id: ID! @eq, member_id: ID @eq): [Contribution!]!
+    contributions(dahira_id: ID! @eq, member_id: ID @eq, event_id: ID @eq): [Contribution!]!
         @paginate(defaultCount: 20) @guard(with: ["sanctum"])
 
     expenses(dahira_id: ID! @eq): [Expense!]!
         @paginate(defaultCount: 20) @guard(with: ["sanctum"])
+
+    # Événements
+    events(dahira_id: ID! @eq, status: EventStatus @eq): [DahiraEvent!]!
+        @paginate(defaultCount: 50) @guard(with: ["sanctum"])
+
+    event(id: ID! @eq): DahiraEvent @find @guard(with: ["sanctum"])
 
     # Dashboard
     dashboardStats(dahira_id: ID!): DashboardStats!
@@ -44,6 +54,24 @@ type Query {
     suggestNextHouse(dahira_id: ID!, scheduled_date: Date!): House
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Queries\\RotationSuggestionQuery@suggest")
+
+    # Cascade (dry-run)
+    previewCascade(from_rotation_id: ID!, mode: CascadeMode!, shift_weeks: Int): CascadePreview!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\RotationCascadeQuery@preview")
+
+    # Moteur de rotation intelligent
+    rotationLogs(rotation_id: ID!): [RotationLog!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\RotationEngineQuery@logs")
+
+    suggestBestSolution(rotation_id: ID!, reason: String!): RotationSuggestionResult!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\RotationEngineQuery@suggestSolution")
+
+    previewRebuild(dahira_id: ID!, from: Date!, weeks: Int!, mode: RebuildMode): RebuildPreview!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\RotationEngineQuery@previewRebuild")
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -61,6 +89,7 @@ type Mutation {
         dahira_name: String!
         city: String
     ): AuthPayload!
+        @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
 
     logout: Boolean! @guard(with: ["sanctum"])
@@ -85,6 +114,15 @@ type Mutation {
 
     deleteMember(id: ID!): Member @delete @guard(with: ["sanctum"])
 
+    # ── Catégories de membres ─────────────────────────────────
+    createMemberCategory(input: CreateMemberCategoryInput! @spread): MemberCategory!
+        @create @guard(with: ["sanctum"])
+
+    updateMemberCategory(id: ID!, input: UpdateMemberCategoryInput! @spread): MemberCategory!
+        @update @guard(with: ["sanctum"])
+
+    deleteMemberCategory(id: ID!): MemberCategory @delete @guard(with: ["sanctum"])
+
     # ── Maisons ──────────────────────────────────────────────
     createHouse(input: CreateHouseInput! @spread): House!
         @create @guard(with: ["sanctum"])
@@ -95,7 +133,7 @@ type Mutation {
     deleteHouse(id: ID!): House @delete @guard(with: ["sanctum"])
 
     # ── Rotations ────────────────────────────────────────────
-    scheduleRotation(dahira_id: ID!, scheduled_date: Date!, house_id: ID!): Rotation!
+    scheduleRotation(dahira_id: ID!, scheduled_date: Date!, member_id: ID!, house_id: ID, force_rebuild: Boolean, insert_mode: Boolean, notes: String): ScheduleRotationPayload!
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@schedule")
 
@@ -111,9 +149,13 @@ type Mutation {
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@updateStatus")
 
-    rescheduleRotation(id: ID!, scheduled_date: Date!): Rotation!
+    rescheduleRotation(id: ID!, scheduled_date: Date, mode: CascadeMode!, shift_weeks: Int, motif: RotationMotif!, motif_detail: String): CascadeResult!
         @guard(with: ["sanctum"])
-        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@reschedule")
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationCascadeMutation@reschedule")
+
+    cancelRotation(id: ID!, mode: CascadeMode!, motif: RotationMotif!, motif_detail: String): CascadeResult!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationCascadeMutation@cancel")
 
     # ── Assignations ─────────────────────────────────────────
     createAssignment(input: CreateAssignmentInput! @spread): Assignment!
@@ -131,11 +173,52 @@ type Mutation {
 
     createExpense(input: CreateExpenseInput! @spread): Expense!
         @create @guard(with: ["sanctum"])
+
+    # ── Moteur de rotation intelligent ───────────────────────
+    updateMemberAvailability(id: ID!, availability_status: MemberAvailabilityStatus!): Member!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationEngineMutation@updateAvailability")
+
+    applyRebuild(preview: RebuildPreviewInput!): [Rotation!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationEngineMutation@applyRebuild")
+
+    cancelRebuild(rebuild_id: ID!): Boolean!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationEngineMutation@cancelRebuild")
+
+    applyRotationSolution(rotation_id: ID!, solution_type: String!, meta: String): Rotation!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationEngineMutation@applySolution")
+
+    # ── Événements ───────────────────────────────────────────
+    createEvent(input: CreateEventInput! @spread): DahiraEvent!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@create")
+
+    updateEvent(id: ID!, input: UpdateEventInput! @spread): DahiraEvent!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@update")
+
+    closeEvent(id: ID!): DahiraEvent!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@close")
+
+    deleteEvent(id: ID!): DahiraEvent!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@delete")
 }
 
 # ─────────────────────────────────────────────────────────────
 #  TYPES
 # ─────────────────────────────────────────────────────────────
+
+type ScheduleRotationPayload {
+    rotation: Rotation!
+    replaced_rotation: Rotation
+    rebuild_applied: Boolean!
+    rebuild_count: Int!
+}
 
 type SchedulePeriodPayload {
     rotations: [Rotation!]!
@@ -194,10 +277,25 @@ type Dahira {
     updated_at: DateTime!
 }
 
+type MemberCategory {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    name: String!
+    label: String!
+    weekly_amount: Float!
+    color: String!
+    is_default: Boolean!
+    sort_order: Int!
+    members: [Member!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
 type Member {
     id: ID!
     dahira: Dahira! @belongsTo
     house: House @belongsTo
+    category: MemberCategory @belongsTo(relation: "category")
     user: User @belongsTo
     first_name: String!
     last_name: String!
@@ -209,6 +307,10 @@ type Member {
     joined_at: Date
     is_active: Boolean!
     notes: String
+    photo_url: String
+    availability_status: MemberAvailabilityStatus!
+    absence_frequency: Int!
+    priority_score: Float!
     contributions: [Contribution!]! @hasMany
     assignments: [Assignment!]! @hasMany
     created_at: DateTime!
@@ -223,6 +325,7 @@ type House {
     neighborhood: String
     capacity: Int!
     is_available: Boolean!
+    is_headquarters: Boolean!
     min_interval_weeks: Int!
     total_received: Int!
     last_received_at: Date
@@ -250,6 +353,7 @@ type Contribution {
     id: ID!
     dahira: Dahira! @belongsTo
     member: Member! @belongsTo
+    event: DahiraEvent @belongsTo(relation: "event")
     type: ContributionType!
     amount: Float!
     paid_at: Date!
@@ -258,6 +362,30 @@ type Contribution {
     notes: String
     created_at: DateTime!
     updated_at: DateTime!
+}
+
+type DahiraEvent {
+    id: ID!
+    dahira: Dahira! @belongsTo
+    name: String!
+    type: EventType!
+    target_amount: Float
+    deadline: Date
+    color: String!
+    status: EventStatus!
+    description: String
+    category_amounts: [EventCategoryAmount!]! @hasMany(relation: "categoryAmounts")
+    contributions: [Contribution!]! @hasMany
+    total_collected: Float! @method(name: "getTotalCollected")
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type EventCategoryAmount {
+    id: ID!
+    event: DahiraEvent! @belongsTo
+    category: MemberCategory! @belongsTo(relation: "category")
+    amount: Float!
 }
 
 type Expense {
@@ -297,8 +425,19 @@ enum Gender {
 enum RotationStatus {
     planned
     confirmed
-    done
+    ongoing
+    completed
     cancelled
+    rescheduled
+    headquarters
+}
+
+enum MemberAvailabilityStatus {
+    available
+    unavailable
+    travel
+    sick
+    suspended
 }
 
 enum ContributionType {
@@ -312,6 +451,19 @@ enum ContributionStatus {
     pending
     paid
     partial
+}
+
+enum EventType {
+    thiant
+    ziar
+    gamou
+    social
+    autre
+}
+
+enum EventStatus {
+    active
+    closed
 }
 
 enum ExpenseCategory {
@@ -344,6 +496,10 @@ input CreateDahiraInput {
     email: String @rules(apply: ["nullable", "email"])
     description: String @rules(apply: ["nullable", "max:1000"])
     is_active: Boolean
+    # Compte admin du Dahira
+    admin_name: String @rules(apply: ["required", "min:2", "max:150"])
+    admin_email: String @rules(apply: ["required", "email", "unique:users,email"])
+    admin_password: String @rules(apply: ["required", "min:8"])
 }
 
 input UpdateDahiraInput {
@@ -359,6 +515,7 @@ input UpdateDahiraInput {
 input CreateMemberInput {
     dahira_id: ID!
     house_id: ID
+    member_category_id: ID
     first_name: String! @rules(apply: ["min:2", "max:100"])
     last_name: String! @rules(apply: ["min:2", "max:100"])
     phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
@@ -371,6 +528,7 @@ input CreateMemberInput {
 
 input UpdateMemberInput {
     house_id: ID
+    member_category_id: ID
     first_name: String @rules(apply: ["min:2", "max:100"])
     last_name: String @rules(apply: ["min:2", "max:100"])
     phone: String @rules(apply: ["nullable", "regex:/^[+0-9\\s\\-]{7,20}$/"])
@@ -378,7 +536,9 @@ input UpdateMemberInput {
     gender: Gender
     profession: String @rules(apply: ["nullable", "max:100"])
     is_active: Boolean
+    photo_url: String
     notes: String @rules(apply: ["nullable", "max:1000"])
+    availability_status: MemberAvailabilityStatus
 }
 
 input CreateHouseInput {
@@ -397,6 +557,7 @@ input UpdateHouseInput {
     capacity: Int @rules(apply: ["nullable", "integer", "min:1", "max:10000"])
     min_interval_weeks: Int @rules(apply: ["nullable", "integer", "min:1", "max:52"])
     is_available: Boolean
+    is_headquarters: Boolean
 }
 
 input CreateAssignmentInput {
@@ -410,12 +571,39 @@ input CreateAssignmentInput {
 input CreateContributionInput {
     dahira_id: ID!
     member_id: ID!
+    event_id: ID
     type: ContributionType! @rules(apply: ["required"])
     amount: Float! @rules(apply: ["numeric", "min:0.01"])
     paid_at: Date!
     period: String @rules(apply: ["nullable", "max:20"])
     status: ContributionStatus! @rules(apply: ["required"])
     notes: String @rules(apply: ["nullable", "max:1000"])
+}
+
+input CreateEventInput {
+    dahira_id: ID!
+    name: String! @rules(apply: ["min:2", "max:150"])
+    type: EventType!
+    target_amount: Float @rules(apply: ["nullable", "numeric", "min:0"])
+    deadline: Date
+    color: String @rules(apply: ["nullable", "max:20"])
+    description: String @rules(apply: ["nullable", "max:1000"])
+    category_amounts: [EventCategoryAmountInput!]
+}
+
+input UpdateEventInput {
+    name: String @rules(apply: ["min:2", "max:150"])
+    type: EventType
+    target_amount: Float @rules(apply: ["nullable", "numeric", "min:0"])
+    deadline: Date
+    color: String @rules(apply: ["nullable", "max:20"])
+    description: String @rules(apply: ["nullable", "max:1000"])
+    category_amounts: [EventCategoryAmountInput!]
+}
+
+input EventCategoryAmountInput {
+    member_category_id: ID!
+    amount: Float!
 }
 
 input CreateExpenseInput {
@@ -425,4 +613,188 @@ input CreateExpenseInput {
     amount: Float! @rules(apply: ["numeric", "min:0.01"])
     spent_at: Date!
     notes: String @rules(apply: ["nullable", "max:1000"])
+}
+
+input CreateMemberCategoryInput {
+    dahira_id: ID!
+    name: String! @rules(apply: ["min:2", "max:50"])
+    label: String! @rules(apply: ["min:2", "max:100"])
+    weekly_amount: Float @rules(apply: ["nullable", "numeric", "min:0"])
+    color: String @rules(apply: ["nullable", "max:20"])
+    sort_order: Int @rules(apply: ["nullable", "integer", "min:0"])
+}
+
+input UpdateMemberCategoryInput {
+    dahira_id: ID
+    name: String @rules(apply: ["min:2", "max:50"])
+    label: String @rules(apply: ["min:2", "max:100"])
+    weekly_amount: Float @rules(apply: ["nullable", "numeric", "min:0"])
+    color: String @rules(apply: ["nullable", "max:20"])
+    sort_order: Int @rules(apply: ["nullable", "integer", "min:0"])
+}
+
+# ── Rotation Engine — Types ────────────────────────────────────
+
+type RotationLog {
+    id: ID!
+    rotation_id: ID!
+    dahira_id: ID!
+    action: String!
+    meta: String
+    created_at: DateTime!
+    created_by_name: String!
+}
+
+type RebuildPreviewItem {
+    rotation_id: ID!
+    date: String!
+    old_member_id: ID
+    old_member_name: String
+    old_house_id: ID
+    old_house_label: String
+    new_member_id: ID
+    new_member_name: String
+    new_house_id: ID
+    new_house_label: String
+    change_type: String!
+}
+
+type RebuildLockedItem {
+    rotation_id: ID!
+    date: String!
+    member_name: String
+    house_label: String
+}
+
+type RebuildMeta {
+    mode: String!
+    from: String!
+    to: String!
+    total_rotations: Int!
+    changed: Int!
+    unchanged: Int!
+    stability_pct: Float!
+}
+
+type RebuildPreview {
+    locked: [RebuildLockedItem!]!
+    preview: [RebuildPreviewItem!]!
+    meta: RebuildMeta!
+}
+
+type RotationSolutionItem {
+    type: String!
+    label: String!
+    date: String
+    house_id: ID
+    member_id: ID
+    rotation_a_id: ID
+    rotation_b_id: ID
+    _score: Float
+}
+
+type RotationSuggestionResult {
+    gravity: String!
+    confidence: String!
+    score: Float!
+    recommended_solution: String!
+    confidence_score: Float!
+    all_solutions: [RotationSolutionItem!]!
+}
+
+# ── Cascade — Enums ───────────────────────────────────────────
+
+enum CascadeMode {
+    HEADQUARTERS
+    CHAIN
+    SWAP
+    GAP
+    FILL
+    INSERT
+    REPLACE
+}
+
+enum RotationMotif {
+    ABSENCE
+    SICKNESS
+    TRAVEL
+    DEATH
+    WEDDING
+    RAMADAN
+    MAGAL
+    GAMOU
+    RELIGIOUS_EVENT
+    FLOOD
+    LOGISTICS
+    PLANNING_ERROR
+    REBALANCE
+    OTHER
+}
+
+# ── Cascade — Types ────────────────────────────────────────────
+
+type CascadePreviewItem {
+    rotation_id: ID!
+    member_name: String
+    house_label: String
+    old_date: Date!
+    new_date: Date!
+    is_locked: Boolean!
+}
+
+type CascadeMeta {
+    mode: String!
+    total_affected: Int!
+    locked_skipped: Int!
+    shift_weeks: Int
+}
+
+type CascadePreview {
+    items: [CascadePreviewItem!]!
+    meta: CascadeMeta!
+    has_locked_warning: Boolean!
+}
+
+type CascadeResult {
+    applied_count: Int!
+    skipped_locked: Int!
+    headquarters_rotation: Rotation
+    rotations: [Rotation!]!
+}
+
+# ── Rotation Engine — Enums ────────────────────────────────────
+
+enum RebuildMode {
+    balanced
+    stable
+    geographic
+    urgent
+}
+
+# ── Rotation Engine — Inputs ───────────────────────────────────
+
+input RebuildPreviewItemInput {
+    rotation_id: ID!
+    date: String!
+    old_member_id: ID
+    new_member_id: ID
+    old_house_id: ID
+    new_house_id: ID
+    change_type: String!
+}
+
+input RebuildMetaInput {
+    mode: String!
+    from: String!
+    to: String!
+    total_rotations: Int!
+    changed: Int!
+    unchanged: Int!
+    stability_pct: Float!
+}
+
+input RebuildPreviewInput {
+    locked: [String!]
+    preview: [RebuildPreviewItemInput!]!
+    meta: RebuildMetaInput!
 }

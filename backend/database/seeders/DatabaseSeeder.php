@@ -29,7 +29,13 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Rôles créés : ' . implode(', ', $roles));
 
-        // Crée les utilisateurs
-        $this->call(UserSeeder::class);
+        // Crée le super admin, puis le Dahira + l'admin
+        $this->call([
+            SuperAdminSeeder::class,
+            DahiraSeeder::class,
+            MemberCategorySeeder::class,
+            HouseSeeder::class,
+            MemberSeeder::class,
+        ]);
     }
 }

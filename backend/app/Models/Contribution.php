@@ -13,7 +13,7 @@ class Contribution extends Model
         static::addGlobalScope(new TenantScope());
     }
     protected $fillable = [
-        'dahira_id', 'member_id', 'type',
+        'dahira_id', 'member_id', 'event_id', 'type',
         'amount', 'paid_at', 'period', 'status', 'notes',
     ];
 
@@ -30,5 +30,10 @@ class Contribution extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(DahiraEvent::class, 'event_id');
     }
 }

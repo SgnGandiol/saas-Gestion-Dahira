@@ -3,6 +3,9 @@
 namespace App\GraphQL\Mutations;
 
 use App\Models\Rotation;
+use App\Services\RotationLogService;
+use App\Services\RotationPlannerService;
+use App\Services\RotationCascadeService;
 use App\Services\RotationService;
 use Carbon\Carbon;
 use GraphQL\Error\Error;
@@ -10,7 +13,12 @@ use Illuminate\Support\Facades\DB;
 
 final class RotationMutation
 {
-    public function __construct(private readonly RotationService $service) {}
+    public function __construct(
+        private readonly RotationService        $service,
+        private readonly RotationPlannerService $planner,
+        private readonly RotationLogService     $logger,
+        private readonly RotationCascadeService $cascade,
+    ) {}
 
     /**
      * Auto-selects the best house and creates the rotation.
@@ -39,19 +47,80 @@ final class RotationMutation
     }
 
     /**
-     * Manually schedule a rotation with an explicit house.
+     * Manually schedule a rotation for a specific member (house derived from member).
+     *
+     * force_rebuild = true :
+     *   - Si un tour existe déjà à cette date → il est remplacé (statut cancelled) et loggé
+     *   - Le planning futur flexible (>=2 semaines) est recalculé via RotationPlannerService
      */
-    public function schedule(null $root, array $args): Rotation
+    public function schedule(null $root, array $args): array
     {
-        $house  = \App\Models\House::findOrFail((int) $args['house_id']);
-        $member = $this->service->suggestNextMember($house);
+        $member  = \App\Models\Member::findOrFail((int) $args['member_id']);
+        $houseId = $args['house_id'] ?? $member->house_id;
 
-        return $this->service->createRotation(
-            (int) $args['dahira_id'],
-            $house->id,
-            $args['scheduled_date'],
-            $member?->id,
-        );
+        if (! $houseId) {
+            throw new Error("Le membre sélectionné n'a pas de maison assignée.");
+        }
+
+        $dahiraId      = (int) $args['dahira_id'];
+        $scheduledDate = $args['scheduled_date'];
+        $forceRebuild  = (bool) ($args['force_rebuild'] ?? false);
+        $insertMode    = (bool) ($args['insert_mode']   ?? false);
+        $notes         = $args['notes'] ?? null;
+
+        return DB::transaction(function () use ($dahiraId, $houseId, $scheduledDate, $member, $forceRebuild, $insertMode, $notes): array {
+            $replacedRotation = null;
+            $rebuildCount     = 0;
+
+            // Détecter un tour existant à cette date
+            $existing = Rotation::where('dahira_id', $dahiraId)
+                ->where('scheduled_date', $scheduledDate)
+                ->whereIn('status', ['planned', 'confirmed'])
+                ->first();
+
+            if ($existing) {
+                if ($insertMode) {
+                    // INSERT : décaler le tour existant et tous les suivants de +1 semaine
+                    $shiftedCount = $this->cascade->insertShift($existing, 'INSERT', null);
+                    $rebuildCount = $shiftedCount;
+                } elseif ($forceRebuild) {
+                    // REPLACE : annuler l'existant et reconstruire le planning
+                    $existing->update(['status' => 'cancelled']);
+                    $this->logger->logChange($existing, 'replaced_by_manual', [
+                        'new_member_id'   => $member->id,
+                        'new_member_name' => $member->full_name,
+                    ]);
+                    $replacedRotation = $existing;
+                } else {
+                    throw new Error(
+                        "Un tour est déjà planifié le {$scheduledDate}. Choisissez \"Insérer\" ou \"Remplacer\"."
+                    );
+                }
+            }
+
+            // Créer le nouveau tour
+            $rotation = $this->service->createRotation($dahiraId, (int) $houseId, $scheduledDate, $member->id);
+            if ($notes) {
+                $rotation->update(['notes' => $notes]);
+            }
+
+            // Reconstruire le planning futur si demandé (mode REPLACE)
+            if ($forceRebuild && $replacedRotation) {
+                $fromDate = Carbon::parse($scheduledDate)->addWeeks(2)->toDateString();
+                $preview  = $this->planner->previewRebuild($dahiraId, $fromDate, 12, 'balanced');
+                if (! empty($preview['preview'])) {
+                    $updated      = $this->planner->applyRebuild($preview);
+                    $rebuildCount = $updated->count();
+                }
+            }
+
+            return [
+                'rotation'          => $rotation,
+                'replaced_rotation' => $replacedRotation,
+                'rebuild_applied'   => $forceRebuild || $insertMode,
+                'rebuild_count'     => $rebuildCount,
+            ];
+        });
     }
 
     /**
@@ -95,22 +164,6 @@ final class RotationMutation
             'skipped_dates' => $skippedDates,
             'skipped_count' => count($skippedDates),
         ];
-    }
-
-    /**
-     * Moves a rotation to a new date (only allowed for planned/confirmed).
-     */
-    public function reschedule(null $root, array $args): Rotation
-    {
-        $rotation = Rotation::findOrFail($args['id']);
-
-        if (in_array($rotation->status, ['done', 'cancelled'])) {
-            throw new Error('Impossible de repousser un tour déjà effectué ou annulé.');
-        }
-
-        $rotation->update(['scheduled_date' => $args['scheduled_date']]);
-
-        return $rotation->fresh();
     }
 
     /**

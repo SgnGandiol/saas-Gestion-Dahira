@@ -14,10 +14,21 @@ export const GET_MEMBERS = gql`
         profession
         is_active
         joined_at
+        availability_status
+        absence_frequency
+        priority_score
+        photo_url
         house {
           id
           label
           address
+        }
+        category {
+          id
+          name
+          label
+          color
+          weekly_amount
         }
       }
       paginatorInfo {

@@ -19,14 +19,6 @@ class RotationService
      * A negative debt means the house is under-served relative to its size.
      * We pick the house with the lowest (most negative) debt.
      *
-     * Global totals are computed over ALL available houses (not just the eligible pool)
-     * so that a house exiting cooldown sees its correct historical debt.
-     *
-     * Hard exclusions:
-     *   - No active members
-     *   - is_available = false
-     *   - Cooldown not respected (strict mode only)
-     *
      * @param array $extraCounts  rotations already planned in this session (house_id => count)
      */
     public function suggestNextHouse(
@@ -44,7 +36,7 @@ class RotationService
                 'members'   => fn ($q) => $q->where('is_active', true),
             ])
             ->withCount([
-                'rotations as scheduled_count' => fn ($q) => $q->whereIn('status', ['planned', 'confirmed', 'done']),
+                'rotations as scheduled_count' => fn ($q) => $q->whereIn('status', ['planned', 'confirmed', 'completed']),
             ])
             ->get();
 
@@ -58,13 +50,11 @@ class RotationService
             return null;
         }
 
-        // Compute global totals over ALL houses (preserve historical debt baseline)
         $totalMembers   = $houses->sum(fn (House $h) => $h->members->count());
         $totalRotations = $houses->sum(
             fn (House $h) => ($h->scheduled_count ?? 0) + ($extraCounts[$h->id] ?? 0)
         );
 
-        // Apply cooldown filter
         $eligible = $houses->filter(fn (House $h) => $this->respectsMinInterval($h, $date));
 
         $pool = $eligible->isNotEmpty()
@@ -81,38 +71,53 @@ class RotationService
     }
 
     /**
-     * Picks the member with the fewest rotations globally.
-     * Members who never hosted get absolute priority.
-     * Tiebreaker: days since last rotation (more days = higher priority).
-     * Single aggregated query — no N+1.
+     * Picks the best member using a composite priority score (L2).
+     *
+     * score = 35% × days_without_tour
+     *       + 25% × availability_bonus
+     *       − 20% × absence_frequency
+     *       − 15% × recency_penalty
+     *       − 5%  × suspension_penalty
+     *
+     * Suspended members are never selected.
      */
     public function suggestNextMember(House $house): ?Member
     {
         $members = $house->relationLoaded('members')
-            ? $house->members->where('is_active', true)
-            : $house->members()->where('is_active', true)->get();
+            ? $house->members->where('is_active', true)->where('availability_status', '!=', 'suspended')
+            : $house->members()->where('is_active', true)->where('availability_status', '!=', 'suspended')->get();
 
         if ($members->isEmpty()) {
             return null;
         }
 
         $stats = Rotation::whereIn('member_id', $members->pluck('id'))
-            ->whereIn('status', ['planned', 'confirmed', 'done'])
+            ->whereIn('status', ['planned', 'confirmed', 'completed', 'ongoing', 'headquarters'])
             ->selectRaw('member_id, COUNT(*) as cnt, MAX(scheduled_date) as last_date')
             ->groupBy('member_id')
             ->get()
             ->keyBy('member_id');
 
-        return $members->sortBy(function (Member $m) use ($stats) {
-            $row   = $stats->get($m->id);
-            $count = (int) ($row?->cnt ?? 0);
-            $days  = $row?->last_date
+        $maxDays = $members->map(function (Member $m) use ($stats) {
+            $row = $stats->get($m->id);
+            return $row?->last_date
                 ? Carbon::parse($row->last_date)->diffInDays(now())
-                : PHP_INT_MAX;
+                : 365;
+        })->max() ?: 1;
 
-            // Primary: fewest rotations. Tiebreaker: longest idle (negative sign = prefer more days)
-            return $count - ($days * 0.0001);
-        })->first();
+        $best   = null;
+        $bestScore = PHP_INT_MIN;
+
+        foreach ($members as $m) {
+            $score = $this->compositeScore($m, $stats->get($m->id), $maxDays);
+            $this->updatePriorityScore($m, $score);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best      = $m;
+            }
+        }
+
+        return $best;
     }
 
     /**
@@ -131,14 +136,14 @@ class RotationService
 
     /**
      * Updates rotation status.
-     * When marked as done, increments house stats.
+     * When marked completed, increments house stats.
      */
     public function updateStatus(Rotation $rotation, string $status): Rotation
     {
         return DB::transaction(function () use ($rotation, $status): Rotation {
             $rotation->update(['status' => $status]);
 
-            if ($status === 'done') {
+            if ($status === 'completed') {
                 $house = $rotation->house()->first();
                 if ($house) {
                     $house->increment('total_received');
@@ -151,13 +156,60 @@ class RotationService
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  Private helpers
+    //  Score composite
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Checks that enough weeks have passed since the last rotation.
-     * Defaults to 4 weeks when min_interval_weeks is null.
+     * Composite priority score — higher is better.
+     *
+     * Weights: days_without_tour(35) + availability(25) − absence_freq(20)
+     *          − recency(15) − suspension(5)
      */
+    public function compositeScore(Member $member, ?object $stats, int $maxDays): float
+    {
+        // 35% — jours depuis le dernier tour (normalisé 0-100)
+        $daysSinceLast = $stats?->last_date
+            ? Carbon::parse($stats->last_date)->diffInDays(now())
+            : 365;
+        $daysScore = $maxDays > 0 ? ($daysSinceLast / $maxDays) * 100 : 100;
+
+        // 25% — disponibilité
+        $availabilityScore = match ($member->availability_status ?? 'available') {
+            'available'   => 100,
+            'unavailable' => 0,
+            'travel'      => 20,
+            'sick'        => 0,
+            'suspended'   => -200, // disqualified
+            default       => 50,
+        };
+
+        // 20% — pénalité fréquence d'absences (0–100, inversé)
+        $absencePenalty = min(100, ($member->absence_frequency ?? 0) * 10);
+
+        // 15% — pénalité si tour récent
+        $totalRotations = (int) ($stats?->cnt ?? 0);
+        $recencyPenalty = min(100, $totalRotations * 15);
+
+        // 5% — statut suspendu
+        $suspensionPenalty = ($member->availability_status === 'suspended') ? 100 : 0;
+
+        return (0.35 * $daysScore)
+             + (0.25 * $availabilityScore)
+             - (0.20 * $absencePenalty)
+             - (0.15 * $recencyPenalty)
+             - (0.05 * $suspensionPenalty);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Private helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private function updatePriorityScore(Member $member, float $score): void
+    {
+        $member->priority_score = round($score, 4);
+        $member->saveQuietly();
+    }
+
     private function respectsMinInterval(House $house, Carbon $date): bool
     {
         $lastRotation = $house->rotations->first();
@@ -171,12 +223,6 @@ class RotationService
         return $weeksSinceLast >= $minWeeks;
     }
 
-    /**
-     * DRR debt for a house: actual_rotations − fair_share.
-     *
-     * A house with a lower (more negative) debt is under-served and should be
-     * selected next. Tiebreaker: small bonus for houses idle the longest.
-     */
     private function houseDebt(House $house, int $totalRotations, int $totalMembers, int $extraCount = 0): float
     {
         $active    = $house->members->count();

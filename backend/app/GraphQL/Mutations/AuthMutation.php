@@ -40,10 +40,15 @@ final class AuthMutation
     }
 
     /**
-     * Inscription du premier admin d'un Dahira.
+     * Inscription du premier admin d'un Dahira (réservé au super_admin).
      */
     public function register(null $root, array $args): array
     {
+        $caller = Auth::user();
+        if (! $caller || ! $caller->hasRole('super_admin')) {
+            throw new AuthenticationException('Accès réservé au super administrateur.');
+        }
+
         $baseSlug = Str::slug($args['dahira_name']);
 
         // Ensure unique slug — append random suffix if collision

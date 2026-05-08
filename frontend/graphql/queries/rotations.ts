@@ -19,6 +19,12 @@ export const GET_ROTATIONS = gql`
             id
             full_name
             phone
+            category {
+              id
+              label
+              color
+              weekly_amount
+            }
           }
         }
         member {

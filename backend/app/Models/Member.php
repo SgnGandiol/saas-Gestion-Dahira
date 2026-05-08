@@ -18,15 +18,18 @@ class Member extends Model
     }
 
     protected $fillable = [
-        'dahira_id', 'house_id', 'user_id',
+        'dahira_id', 'house_id', 'member_category_id', 'user_id',
         'first_name', 'last_name', 'phone', 'email',
         'gender', 'profession', 'joined_at',
-        'is_active', 'notes',
+        'is_active', 'notes', 'photo_url',
+        'availability_status', 'absence_frequency', 'priority_score',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'joined_at' => 'date',
+        'is_active'         => 'boolean',
+        'joined_at'         => 'date',
+        'absence_frequency' => 'integer',
+        'priority_score'    => 'float',
     ];
 
     public function dahira(): BelongsTo
@@ -37,6 +40,11 @@ class Member extends Model
     public function house(): BelongsTo
     {
         return $this->belongsTo(House::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(MemberCategory::class, 'member_category_id');
     }
 
     public function user(): BelongsTo

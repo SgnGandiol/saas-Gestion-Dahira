@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/store/auth.store'
 import { LOGIN_MUTATION } from '@/graphql/mutations/auth'
+import { Logo } from '@/components/layout/Logo'
 
 const schema = z.object({
   email: z.string().email('Email invalide'),
@@ -83,8 +84,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg">
-            <span className="text-2xl font-bold text-white">SGD</span>
+          <div className="mx-auto mb-4 flex justify-center">
+            <Logo size={72} className="shadow-lg" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Connexion</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -121,12 +122,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Pas encore de compte ?{' '}
-            <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">
-              Créer un Dahira
-            </Link>
-          </p>
         </div>
       </div>
     </div>

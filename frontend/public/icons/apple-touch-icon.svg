@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="34" fill="#059669"/>
+  <circle cx="90" cy="62" r="32" fill="white"/>
+  <circle cx="103" cy="55" r="26" fill="#059669"/>
+  <polygon points="90,89 93,98 103,98 95,104 98,113 90,107 82,113 85,104 77,98 87,98"
+    fill="white"/>
+  <text x="90" y="156" font-family="Arial Black, Arial, sans-serif"
+    font-size="38" font-weight="900" fill="white" text-anchor="middle" letter-spacing="2">SGD</text>
+</svg>

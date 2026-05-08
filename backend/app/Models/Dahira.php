@@ -44,6 +44,11 @@ class Dahira extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(DahiraEvent::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

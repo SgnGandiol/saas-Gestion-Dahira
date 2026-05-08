@@ -1,16 +1,23 @@
 import { gql } from '@apollo/client/core'
 
 export const SCHEDULE_ROTATION = gql`
-  mutation ScheduleRotation($dahira_id: ID!, $scheduled_date: Date!, $house_id: ID!) {
-    scheduleRotation(dahira_id: $dahira_id, scheduled_date: $scheduled_date, house_id: $house_id) {
-      id
-      scheduled_date
-      status
-      house {
+  mutation ScheduleRotation($dahira_id: ID!, $scheduled_date: Date!, $member_id: ID!, $force_rebuild: Boolean) {
+    scheduleRotation(
+      dahira_id: $dahira_id
+      scheduled_date: $scheduled_date
+      member_id: $member_id
+      force_rebuild: $force_rebuild
+    ) {
+      rotation {
         id
-        label
-        address
+        scheduled_date
+        status
+        member { id full_name }
+        house { id label address }
       }
+      replaced_rotation { id scheduled_date }
+      rebuild_applied
+      rebuild_count
     }
   }
 `

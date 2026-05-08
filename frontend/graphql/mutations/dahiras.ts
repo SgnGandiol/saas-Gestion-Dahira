@@ -9,6 +9,9 @@ export const CREATE_DAHIRA = gql`
     $email: String
     $description: String
     $is_active: Boolean
+    $admin_name: String!
+    $admin_email: String!
+    $admin_password: String!
   ) {
     createDahira(
       input: {
@@ -19,6 +22,9 @@ export const CREATE_DAHIRA = gql`
         email: $email
         description: $description
         is_active: $is_active
+        admin_name: $admin_name
+        admin_email: $admin_email
+        admin_password: $admin_password
       }
     ) {
       dahira {

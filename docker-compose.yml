@@ -31,7 +31,7 @@ services:
     container_name: sgd_nginx
     restart: unless-stopped
     ports:
-      - "8080:80"         # accès : http://localhost:8080
+      - "8081:80"         # accès : http://localhost:8081
     volumes:
       - ./backend:/var/www/html
       - vendor_data:/var/www/html/vendor  # même volume que app
@@ -56,8 +56,9 @@ services:
       - node_modules_data:/app/node_modules  # perf Windows
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8080/graphql
+      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8081/graphql
       - GRAPHQL_INTERNAL_URL=http://nginx/graphql
+      - WATCHPACK_POLLING=true
     networks:
       - sgd_network
     depends_on:

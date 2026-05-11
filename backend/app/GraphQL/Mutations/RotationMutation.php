@@ -175,4 +175,118 @@ final class RotationMutation
 
         return $this->service->updateStatus($rotation, $args['status']);
     }
+
+    /**
+     * Reorder existing future rotations by reassigning their dates.
+     *
+     * The dates are treated as fixed slots (sorted chronologically).
+     * The caller sends the new order of rotation IDs; each rotation
+     * receives the date that belongs to its new slot index.
+     *
+     * Example: [R1:Jan5, R2:Jan12, R3:Jan19] reordered to [R3, R1, R2]
+     *          → R3 gets Jan5, R1 gets Jan12, R2 gets Jan19
+     */
+    public function reorder(null $root, array $args): array
+    {
+        $dahiraId = (int) $args['dahira_id'];
+        $ids      = $args['rotation_ids'];
+
+        return DB::transaction(function () use ($dahiraId, $ids): array {
+            $rotations = Rotation::whereIn('id', $ids)
+                ->where('dahira_id', $dahiraId)
+                ->whereIn('status', ['planned', 'confirmed'])
+                ->with(['member', 'house'])
+                ->get()
+                ->keyBy('id');
+
+            if ($rotations->count() !== count($ids)) {
+                throw new Error(
+                    'Certaines rotations sont introuvables ou ne peuvent pas être réordonnées (statut invalide).'
+                );
+            }
+
+            // Dates fixes dans l'ordre chronologique original
+            $sortedDates = $rotations
+                ->sortBy('scheduled_date')
+                ->pluck('scheduled_date')
+                ->values();
+
+            $updated = [];
+            foreach ($ids as $index => $id) {
+                $rotation = $rotations[(string) $id];
+                $rotation->scheduled_date = $sortedDates[$index];
+                $rotation->save();
+                $updated[] = $rotation;
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
+     * Bulk-create rotations from a custom drag-and-drop plan.
+     *
+     * Each entry provides member_id, optional house_id and a specific scheduled_date.
+     * If clear_future=true, all planned/confirmed rotations after today are deleted first.
+     * Existing rotations on the same date are skipped (counted as skipped).
+     */
+    public function planCustom(null $root, array $args): array
+    {
+        $dahiraId    = (int) $args['dahira_id'];
+        $entries     = $args['entries'];
+        $clearFuture = (bool) ($args['clear_future'] ?? false);
+
+        return DB::transaction(function () use ($dahiraId, $entries, $clearFuture): array {
+            // Optionally wipe all future planned / confirmed rotations
+            if ($clearFuture) {
+                Rotation::where('dahira_id', $dahiraId)
+                    ->whereIn('status', ['planned', 'confirmed'])
+                    ->where('scheduled_date', '>', now()->toDateString())
+                    ->delete();
+            }
+
+            // Collect occupied dates to detect conflicts
+            $occupied = Rotation::where('dahira_id', $dahiraId)
+                ->whereIn('status', ['planned', 'confirmed'])
+                ->pluck('scheduled_date')
+                ->map(fn($d) => $d instanceof \Carbon\Carbon ? $d->toDateString() : (string) $d)
+                ->flip()
+                ->all();
+
+            $created  = [];
+            $skipped  = 0;
+
+            foreach ($entries as $entry) {
+                $raw  = $entry['scheduled_date'];
+                $date = $raw instanceof \Carbon\Carbon ? $raw->toDateString() : (string) $raw;
+                $memberId = (int) $entry['member_id'];
+
+                // Skip if a rotation already exists at this date
+                if (isset($occupied[$date])) {
+                    $skipped++;
+                    continue;
+                }
+
+                // Resolve house: explicit > member's house
+                $houseId = isset($entry['house_id']) && $entry['house_id']
+                    ? (int) $entry['house_id']
+                    : \App\Models\Member::find($memberId)?->house_id;
+
+                if (! $houseId) {
+                    $skipped++;
+                    continue;
+                }
+
+                $rotation = $this->service->createRotation($dahiraId, $houseId, $date, $memberId);
+                $created[] = $rotation;
+                $occupied[$date] = true;  // prevent duplicate dates in same batch
+            }
+
+            return [
+                'created_count' => count($created),
+                'skipped_count' => $skipped,
+                'rotations'     => $created,
+            ];
+        });
+    }
 }

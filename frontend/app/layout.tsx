@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="h-full">
+    <html lang="fr" className="h-full" suppressHydrationWarning>
       <body className={`${inter.className} h-full bg-gray-50 antialiased`}>
         <ApolloProvider>{children}</ApolloProvider>
         <PwaRegister />

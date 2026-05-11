@@ -101,6 +101,42 @@ export const DELETE_ASSIGNMENT = gql`
   }
 `
 
+export const PLAN_CUSTOM_ROTATIONS = gql`
+  mutation PlanCustomRotations(
+    $dahira_id:   ID!
+    $entries:     [CustomPlanEntryInput!]!
+    $clear_future: Boolean
+  ) {
+    planCustomRotations(
+      dahira_id:    $dahira_id
+      entries:      $entries
+      clear_future: $clear_future
+    ) {
+      created_count
+      skipped_count
+      rotations {
+        id
+        scheduled_date
+        status
+        member { id full_name }
+        house  { id label address }
+      }
+    }
+  }
+`
+
+export const REORDER_ROTATIONS = gql`
+  mutation ReorderRotations($dahira_id: ID!, $rotation_ids: [ID!]!) {
+    reorderRotations(dahira_id: $dahira_id, rotation_ids: $rotation_ids) {
+      id
+      scheduled_date
+      status
+      member { id full_name }
+      house  { id label address }
+    }
+  }
+`
+
 export const CREATE_ASSIGNMENT = gql`
   mutation CreateAssignment($dahira_id: ID!, $rotation_id: ID!, $member_id: ID!, $task: TaskType!, $notes: String) {
     createAssignment(input: {

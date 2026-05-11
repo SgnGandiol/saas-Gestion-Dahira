@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(docker run:*)",
-      "Bash(dir D:\\AppGestionDahira *)"
+      "Bash(dir D:\\AppGestionDahira *)",
+      "PowerShell(docker exec sgd_frontend *)"
     ]
   }
 }

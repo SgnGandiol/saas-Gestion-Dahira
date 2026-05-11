@@ -191,6 +191,23 @@ type Mutation {
         @guard(with: ["sanctum"])
         @field(resolver: "App\\GraphQL\\Mutations\\RotationEngineMutation@applySolution")
 
+    # ── Planification personnalisée (drag & drop) ────────────
+    planCustomRotations(
+        dahira_id:   ID!
+        entries:     [CustomPlanEntryInput!]!
+        clear_future: Boolean
+    ): CustomPlanPayload!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@planCustom")
+
+    # ── Réorganisation des tours existants (drag & drop) ─────
+    reorderRotations(
+        dahira_id:    ID!
+        rotation_ids: [ID!]!
+    ): [Rotation!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\RotationMutation@reorder")
+
     # ── Événements ───────────────────────────────────────────
     createEvent(input: CreateEventInput! @spread): DahiraEvent!
         @guard(with: ["sanctum"])
@@ -212,6 +229,18 @@ type Mutation {
 # ─────────────────────────────────────────────────────────────
 #  TYPES
 # ─────────────────────────────────────────────────────────────
+
+input CustomPlanEntryInput {
+    member_id:      ID!
+    house_id:       ID
+    scheduled_date: Date!
+}
+
+type CustomPlanPayload {
+    created_count: Int!
+    skipped_count: Int!
+    rotations: [Rotation!]!
+}
 
 type ScheduleRotationPayload {
     rotation: Rotation!

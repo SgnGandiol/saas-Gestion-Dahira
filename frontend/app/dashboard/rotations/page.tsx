@@ -6,7 +6,7 @@ import {
   RotateCcw, Plus, Wand2, Calendar, CheckCircle, XCircle, Clock,
   ChevronRight, CalendarRange, CalendarClock, Search, X, Home,
   Lightbulb, History, RefreshCw, AlertTriangle, Building2,
-  ArrowLeftRight, ArrowRight,
+  ArrowLeftRight, ArrowRight, GripVertical,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,16 @@ import {
 } from '@/graphql/mutations/rotationEngine'
 import { Rotation, MemberAvailabilityStatus, CascadePreview, RotationMotif } from '@/types'
 import { formatDate } from '@/lib/utils'
+import dynamic from 'next/dynamic'
+
+const TourCustomPlanner = dynamic(
+  () => import('./tourCustoms').then(m => ({ default: m.TourCustomPlanner })),
+  { ssr: false }
+)
+const RotationReorderPlanner = dynamic(
+  () => import('./tourCustoms').then(m => ({ default: m.RotationReorderPlanner })),
+  { ssr: false }
+)
 
 // ─── Status config ────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -172,6 +182,8 @@ export default function RotationsPage() {
 
   // ── Modal states ──────────────────────────────────────────────
   const [showAutoModal, setShowAutoModal]         = useState(false)
+  const [showCustomPlanner,  setShowCustomPlanner]  = useState(false)
+  const [showReorderPlanner, setShowReorderPlanner] = useState(false)
   const [showManualModal, setShowManualModal]     = useState(false)
   const [showPeriodModal, setShowPeriodModal]     = useState(false)
   const [showSolutionModal, setShowSolutionModal] = useState(false)
@@ -921,7 +933,7 @@ export default function RotationsPage() {
                 <div className="px-6 pb-4 shrink-0 space-y-4 border-b border-gray-100">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Période</label>
+                      <label className="block text-xs font-medium text-black  mb-1">Période</label>
                       <select value={rebuildWeeks} onChange={e => { setRebuildWeeks(+e.target.value); setRebuildPreview(null) }}
                         className="h-9 w-full rounded-lg border border-gray-200 px-3 text-sm focus:outline-none">
                         <option value={4}>4 semaines</option>
@@ -932,7 +944,7 @@ export default function RotationsPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Mode</label>
+                      <label className="block text-xs font-medium text-black  mb-1">Mode</label>
                       <select value={rebuildMode} onChange={e => { setRebuildMode(e.target.value); setRebuildPreview(null) }}
                         className="h-9 w-full rounded-lg border border-gray-200 px-3 text-sm focus:outline-none">
                         {REBUILD_MODES.map(m => <option key={m.value} value={m.value}>{m.label} — {m.desc}</option>)}
@@ -1074,6 +1086,25 @@ export default function RotationsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Planificateur personnalisé (drag & drop) ─────────────── */}
+      {showCustomPlanner && dahiraId && (
+        <TourCustomPlanner
+          dahiraId={dahiraId}
+          onClose={() => setShowCustomPlanner(false)}
+          onSuccess={() => { setShowCustomPlanner(false); refetch() }}
+        />
+      )}
+
+      {/* ── Réordonner les tours existants (drag & drop) ─────────── */}
+      {showReorderPlanner && dahiraId && (
+        <RotationReorderPlanner
+          dahiraId={dahiraId}
+          rotations={futureTours}
+          onClose={() => setShowReorderPlanner(false)}
+          onSuccess={() => { setShowReorderPlanner(false); refetch() }}
+        />
       )}
 
       {/* ── Modal Auto ───────────────────────────────────────────── */}
@@ -1371,6 +1402,17 @@ export default function RotationsPage() {
           </Button>
           <Button onClick={() => setShowManualModal(true)} variant="ghost" className="flex-1 sm:flex-none border border-gray-300">
             <Plus className="h-4 w-4" /> Manuel
+          </Button>
+          <Button onClick={() => setShowReorderPlanner(true)} variant="ghost"
+            className="flex-1 sm:flex-none border border-orange-300 text-orange-700 hover:bg-orange-50">
+            <ArrowLeftRight className="h-4 w-4" />
+            Réordonner
+          </Button>
+          <Button onClick={() => setShowCustomPlanner(true)} variant="ghost"
+            className="flex-1 sm:flex-none border border-blue-300 text-blue-700 hover:bg-blue-50">
+            <GripVertical className="h-4 w-4" />
+            <span className="hidden sm:inline">Glisser-déposer</span>
+            <span className="sm:hidden">Glisser</span>
           </Button>
           <Button onClick={() => { setPeriodResult(null); setShowPeriodModal(true) }} variant="ghost"
             className="flex-1 sm:flex-none border border-purple-300 text-purple-700 hover:bg-purple-50">
